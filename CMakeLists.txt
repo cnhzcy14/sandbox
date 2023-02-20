@@ -1,18 +1,21 @@
 cmake_minimum_required(VERSION 3.12)
 get_filename_component 	(PROJECT_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 project(${PROJECT_NAME} 
-    DESCRIPTION "My test code" 
-    LANGUAGES CXX C)
+  DESCRIPTION "My test code" 
+  LANGUAGES CXX C)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
+
+option(MY_OPTION "This is settable from the command line" OFF)
 
 set(CMAKE_C_FLAGS "-O3  -D_GNU_SOURCE -fPIC -fopenmp")
 set(CMAKE_CXX_FLAGS "-O3  -fPIC -fopenmp")
 # set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 # set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
 # set(LIBS ${LIBS} ${CMAKE_DL_LIBS})
 
@@ -51,8 +54,8 @@ set(CMAKE_CXX_FLAGS "-O3  -fPIC -fopenmp")
 # set(LIBS ${LIBS} PkgConfig::GLIB_JSON)
 
 find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_INCLUDE_DIRS} )
-set(LIBS ${LIBS} ${OpenCV_LIBS})
+# include_directories( ${OpenCV_INCLUDE_DIRS} )
+# set(LIBS ${LIBS} ${OpenCV_LIBS})
 
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
