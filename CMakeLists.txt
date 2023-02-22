@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 get_filename_component 	(PROJECT_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 project(${PROJECT_NAME} 
   DESCRIPTION "My test code" 
@@ -8,16 +8,11 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
 
-option(MY_OPTION "This is settable from the command line" OFF)
-
-set(CMAKE_C_FLAGS "-O3  -D_GNU_SOURCE -fPIC -fopenmp")
-set(CMAKE_CXX_FLAGS "-O3  -fPIC -fopenmp")
-# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
-# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+# option(MY_OPTION "This is settable from the command line" OFF)
+# set(CMAKE_C_FLAGS "-O3  -D_GNU_SOURCE -fPIC -fopenmp")
+# set(CMAKE_CXX_FLAGS "-O3  -fPIC -fopenmp")
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
-# set(LIBS ${LIBS} ${CMAKE_DL_LIBS})
 
 # find_package (Threads)
 # set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT} )
@@ -48,14 +43,12 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # link_directories(/opt/DahuaTech/MVviewer/lib)
 # set(LIBS ${LIBS} MVSDK ImageConvert )
 
-# find_package(PkgConfig REQUIRED)
 
 # pkg_check_modules(GLIB_JSON REQUIRED IMPORTED_TARGET json-glib-1.0)
 # set(LIBS ${LIBS} PkgConfig::GLIB_JSON)
 
 find_package( OpenCV REQUIRED )
-# include_directories( ${OpenCV_INCLUDE_DIRS} )
-# set(LIBS ${LIBS} ${OpenCV_LIBS})
+find_package( Eigen3 REQUIRED NO_MODULE)
 
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
@@ -66,8 +59,6 @@ find_package( OpenCV REQUIRED )
 # pkg_check_modules(LAPACK REQUIRED IMPORTED_TARGET lapack64)
 # set(LIBS ${LIBS} PkgConfig::LAPACK)
 
-# pkg_check_modules(EIGEN REQUIRED IMPORTED_TARGET eigen3)
-# set(LIBS ${LIBS} PkgConfig::EIGEN)
 
 # pkg_check_modules(GLOG REQUIRED IMPORTED_TARGET libglog)
 # set(LIBS ${LIBS} PkgConfig::GLOG)
@@ -163,7 +154,7 @@ add_subdirectory 		(opencv/test)
 # add_subdirectory 		(zmq_code/json_msg)
 
 # eigen
-# add_subdirectory 		(eigen_test)
+add_subdirectory 		(eigen)
 
 # gstreamer
 # add_subdirectory 		(gstreamer/controller_test)
@@ -196,6 +187,8 @@ message(STATUS "================================================================
 message(STATUS "Platform:")
 message(STATUS "  Arch / OS:            ${CMAKE_HOST_SYSTEM_PROCESSOR} / ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION}")
 message(STATUS "  C/C++ Compiler:       ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "  C/C++ Standard:       ${CMAKE_C_STANDARD} ${CMAKE_CXX_STANDARD}")
+message(STATUS "  CMake Version:        ${CMAKE_VERSION}")
 message(STATUS "  Build type:           ${CMAKE_BUILD_TYPE}")
 message(STATUS "======================================================================")
 message(STATUS)
