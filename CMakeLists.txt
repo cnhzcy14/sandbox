@@ -49,6 +49,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package( OpenCV REQUIRED )
 find_package( Eigen3 REQUIRED NO_MODULE)
+find_package( apriltag REQUIRED )
 
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
@@ -129,7 +130,7 @@ add_subdirectory 		(opencv/test)
 # add_subdirectory 		(opencv/frozenGraph)
 # add_subdirectory 		(opencv/dnn_test)
 # add_subdirectory 		(opencv/aruco)
-# add_subdirectory 		(opencv/apriltag)
+add_subdirectory 		(apriltag)
 # add_subdirectory 		(opencv/maskImage)
 
 # OpenMP
