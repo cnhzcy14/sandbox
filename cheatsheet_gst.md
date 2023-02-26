@@ -27,6 +27,8 @@ gst-launch-1.0 rtspsrc location='rtsp://192.168.1.24:8554/test' ! rtph264depay !
 
 gst-launch-1.0 rtspsrc latency=10 location='rtsp://192.168.1.24:8558/stereo' ! rtph264depay ! h264parse ! avdec_h264 ! glimagesink sync=false
 
+gst-launch-1.0 videotestsrc  ! 'video/x-raw,width=640,height=480,framerate=30/1,format=I420' ! x264enc ! rtph264pay ! rtph264depay ! avdec_h264 ! glimagesink
+
 gst-launch-1.0 nvcamerasrc num-buffers=150 ! tee name=t t. ! queue ! omxh264enc ! filesink location=a.h264 t. ! queue ! nvtee ! nvoverlaysink
 
 gst-launch-1.0 videotestsrc ! 'video/x-raw,format=NV12,width=1280,height=720,framerate=30/1' ! nvvidconv ! 'video/x-raw(memory:NVMM), format=(string)NV12' ! nvivafilter cuda-process=true customer-lib-name="libnvsample_cudaprocess.so" ! 'video/x-raw(memory:NVMM), format=(string)NV12' ! nvegltransform ! nveglglessink
@@ -65,6 +67,7 @@ gst-launch-1.0 multifilesrc location="/home/cnhzcy14/work/data/vio/calib0/%02d.p
 
 gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,width=640,height=480 ! videoconvert ! calibboarddetect  delay=2 boardPosConfig=/home/cnhzcy14/work/project/gst-ocv/config/aruco/board_pos_v3.json ! glimagesink
 
-gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,format=GRAY8,width=640,height=480 ! tee name=t allow-not-linked=1 ! queue2 ! valve drop=0 ! sparsefeaturetracker ! fakevideosink async=0  t. ! queue2 ! valve drop=0 ! videorate max-rate=30 rate=30.0 ! markerdetect ! fakevideosink sync=0
+gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,format=GRAY8,width=640,height=480 ! tee name=t allow-not-linked=1 ! queue2 ! glimagesink  t. ! queue2 ! videorate max-rate=30 rate=30 ! glimagesink sync=false
 
+gst-launch-1.0 multifilesrc location="/home/cnhzcy14/work/data/vio/test/image/%08d.png" index=0 caps="image/png,framerate=30/1" ! pngdec ! nvvideoconvert ! m.sink_0 nvstreammux name=m batch-size=1 width=1280 height=960 ! nvof preset-level=2 ! nvofvisual ! nvmultistreamtiler width=1280 height=960 ! nveglglessink
 ```
