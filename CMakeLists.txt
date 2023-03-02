@@ -50,6 +50,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 find_package( OpenCV REQUIRED )
 find_package( Eigen3 REQUIRED NO_MODULE)
 find_package( apriltag REQUIRED )
+find_package(vpi REQUIRED)
 
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
@@ -181,6 +182,9 @@ add_subdirectory 		(eigen)
 #add_subdirectory 		(convolution)
 # add_subdirectory 		(json)
 # add_subdirectory 		(msgpack)
+
+# VPI
+add_subdirectory 		(vpi/samples)
 
 message(STATUS)
 message(STATUS "General configuration for ${PROJECT_NAME}")
