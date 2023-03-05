@@ -47,10 +47,11 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # pkg_check_modules(GLIB_JSON REQUIRED IMPORTED_TARGET json-glib-1.0)
 # set(LIBS ${LIBS} PkgConfig::GLIB_JSON)
 
-find_package( OpenCV REQUIRED )
-find_package( Eigen3 REQUIRED NO_MODULE)
-find_package( apriltag REQUIRED )
+find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(apriltag REQUIRED)
 find_package(vpi REQUIRED)
+find_package(OpenMP REQUIRED)
 
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
@@ -135,8 +136,8 @@ add_subdirectory 		(apriltag)
 # add_subdirectory 		(opencv/maskImage)
 
 # OpenMP
-# add_subdirectory 		(openmp/vector)
-# add_subdirectory 		(openmp/omp_test)
+add_subdirectory 		(openmp/fast_software_implementation)
+add_subdirectory 		(openmp/test)
 
 # acl
 # add_subdirectory 		(acl/examples)
