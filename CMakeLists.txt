@@ -14,9 +14,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
 
-# find_package (Threads)
-# set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT} )
-
 # find_package( OpenCL REQUIRED )
 # include_directories(${OpenCL_INCLUDE_DIR})
 # link_directories(/usr/lib/aarch64-linux-gnu)
@@ -30,19 +27,9 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(LIBS ${LIBS} ${OpenCL_LIBRARY})
 # set(LIBS ${LIBS} OpenCL)
 
-# acl
-# link_directories(/opt/acl/lib)
-# include_directories(/opt/acl/include)
-# set(LIBS ${LIBS} arm_compute arm_compute_core arm_compute_graph)
-
 # find_package(CUDA  REQUIRED)
 # include_directories(${CUDA_INCLUDE_DIRS})
 # set(LIBS ${LIBS} ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_cusparse_LIBRARY} cuda cusolver )
-
-# include_directories(/opt/DahuaTech/MVviewer/include)
-# link_directories(/opt/DahuaTech/MVviewer/lib)
-# set(LIBS ${LIBS} MVSDK ImageConvert )
-
 
 # pkg_check_modules(GLIB_JSON REQUIRED IMPORTED_TARGET json-glib-1.0)
 # set(LIBS ${LIBS} PkgConfig::GLIB_JSON)
@@ -67,8 +54,6 @@ else()
     message(STATUS "OPENVX_LIBRARIES: \t<empty>")
 endif()
 
-# pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
-# set(LIBS ${LIBS} PkgConfig::APRIL)
 
 # pkg_check_modules(BLAS REQUIRED IMPORTED_TARGET blas64)
 # set(LIBS ${LIBS} PkgConfig::BLAS)
@@ -80,8 +65,6 @@ endif()
 # pkg_check_modules(GLOG REQUIRED IMPORTED_TARGET libglog)
 # set(LIBS ${LIBS} PkgConfig::GLOG)
 
-# pkg_check_modules(MSGPACK REQUIRED IMPORTED_TARGET msgpack)
-# set(LIBS ${LIBS} PkgConfig::MSGPACK)
 
 # find_package(Ceres REQUIRED)
 # set(LIBS ${LIBS} ceres )
@@ -128,12 +111,9 @@ endif()
 # add_subdirectory 		(opencl/local_thresh)
 # add_subdirectory 		(opencl/clpeak)
 
-# add_subdirectory 		(cpp_test/simple_test)
-# add_subdirectory 		(cpp_test/threads_affinity)
-
 # openvx
-# add_subdirectory 		(openvx/test)
-# add_subdirectory 		(openvx/bubble-pop)
+add_subdirectory 		(openvx/test)
+add_subdirectory 		(openvx/bubble-pop)
 
 # opencv
 add_subdirectory 		(opencv/test)
@@ -150,8 +130,9 @@ add_subdirectory 		(opencv/test)
 # add_subdirectory 		(opencv/frozenGraph)
 # add_subdirectory 		(opencv/dnn_test)
 # add_subdirectory 		(opencv/aruco)
-add_subdirectory 		(apriltag)
 # add_subdirectory 		(opencv/maskImage)
+
+add_subdirectory 		(apriltag)
 
 # OpenMP
 add_subdirectory 		(openmp/fast_software_implementation)
@@ -163,8 +144,6 @@ add_subdirectory 		(openmp/test)
 
 # # ceres
 # add_subdirectory 		(ceres/examples)
-
-# add_subdirectory 		(misc/csv)
 
 # 0mq
 # add_subdirectory 		(zmq_code/pair)
