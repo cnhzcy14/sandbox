@@ -53,6 +53,19 @@ find_package(apriltag REQUIRED)
 find_package(vpi REQUIRED)
 find_package(OpenMP REQUIRED)
 
+if(DEFINED OPENVX_INCLUDES)
+    message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
+    include_directories(${OPENVX_INCLUDES})
+else()
+    message(STATUS "OPENVX_INCLUDES: \t<empty>")
+endif()
+
+if(DEFINED OPENVX_LIBRARIES)
+    message(STATUS "OPENVX_LIBRARIES: \t${OPENVX_LIBRARIES}")
+else()
+    message(STATUS "OPENVX_LIBRARIES: \t<empty>")
+endif()
+
 # pkg_check_modules(APRIL REQUIRED IMPORTED_TARGET apriltag)
 # set(LIBS ${LIBS} PkgConfig::APRIL)
 
@@ -116,6 +129,10 @@ find_package(OpenMP REQUIRED)
 
 # add_subdirectory 		(cpp_test/simple_test)
 # add_subdirectory 		(cpp_test/threads_affinity)
+
+# openvx
+add_subdirectory 		(openvx/test)
+add_subdirectory 		(openvx/bubble-pop)
 
 # opencv
 add_subdirectory 		(opencv/test)
