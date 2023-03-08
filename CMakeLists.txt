@@ -52,6 +52,7 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(apriltag REQUIRED)
 find_package(vpi REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(Threads REQUIRED)
 
 if(DEFINED OPENVX_INCLUDES)
     message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
@@ -131,8 +132,8 @@ endif()
 # add_subdirectory 		(cpp_test/threads_affinity)
 
 # openvx
-add_subdirectory 		(openvx/test)
-add_subdirectory 		(openvx/bubble-pop)
+# add_subdirectory 		(openvx/test)
+# add_subdirectory 		(openvx/bubble-pop)
 
 # opencv
 add_subdirectory 		(opencv/test)
@@ -156,8 +157,6 @@ add_subdirectory 		(apriltag)
 add_subdirectory 		(openmp/fast_software_implementation)
 add_subdirectory 		(openmp/test)
 
-# acl
-# add_subdirectory 		(acl/examples)
 
 # # blas, lapack
 # add_subdirectory 		(blas/blas_test)
@@ -189,15 +188,18 @@ add_subdirectory 		(eigen)
 # add_subdirectory 		(cuda/ratio_test)
 # add_subdirectory 		(cuda/batchCUBLAS)
 # add_subdirectory 		(cuda/cuSolverDn_LinearSolver)
-# add_subdirectory 		(cpp_test)
-# add_subdirectory 		(c11_test)
-# add_subdirectory 		(v4l2_test)
-# add_subdirectory 		(v4l2_test_gst)
-# add_subdirectory 		(eigen_test)
+
+# cpp
+add_subdirectory 		(cpp/test)
+add_subdirectory 		(cpp/threads_affinity)
+
+#c
+add_subdirectory 		(c/test)
+
+
 # add_subdirectory 		(ft_test)
 # add_subdirectory 		(glfw_test)
 # add_subdirectory 		(gst_test)
-#add_subdirectory 		(convolution)
 # add_subdirectory 		(json)
 # add_subdirectory 		(msgpack)
 
