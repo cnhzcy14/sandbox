@@ -11,7 +11,7 @@ target_link_libraries(vx_pop ${OPENVX_LIBRARIES} ${OpenCV_LIBRARIES})
 target_include_directories(vx_pop PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
 
-add_executable(vxPop src/AMD_app.cpp)
+add_executable(vxPop apps/AMD_app.cpp)
 target_link_libraries(vxPop ${OPENVX_LIBRARIES} ${OpenCV_LIBRARIES} vx_pop)
 
 
