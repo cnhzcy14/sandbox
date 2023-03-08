@@ -7,10 +7,8 @@ project(${PROJECT_NAME}
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
-
+# set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # option(MY_OPTION "This is settable from the command line" OFF)
-# set(CMAKE_C_FLAGS "-O3  -D_GNU_SOURCE -fPIC -fopenmp")
-# set(CMAKE_CXX_FLAGS "-O3  -fPIC -fopenmp")
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
 
