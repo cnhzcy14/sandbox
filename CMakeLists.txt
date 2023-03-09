@@ -38,6 +38,9 @@ find_package(apriltag REQUIRED)
 find_package(vpi REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Threads REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(X11 REQUIRED)
+find_library(MATH_LIBRARY m) # special for finding libm (math.h)
 
 if(DEFINED OPENVX_INCLUDES)
     message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
@@ -182,6 +185,9 @@ add_subdirectory 		(c/test)
 
 # VPI
 add_subdirectory 		(vpi/samples)
+
+# VPI
+add_subdirectory 		(egl/dma-buf-texture-sharing)
 
 message(STATUS)
 message(STATUS "General configuration for ${PROJECT_NAME}")
