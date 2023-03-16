@@ -32,6 +32,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # pkg_check_modules(GLIB_JSON REQUIRED IMPORTED_TARGET json-glib-1.0)
 # set(LIBS ${LIBS} PkgConfig::GLIB_JSON)
 
+find_package(PkgConfig REQUIRED) # for some lib without cmakeconfig
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(apriltag REQUIRED)
@@ -41,6 +42,7 @@ find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
+pkg_check_modules(DRM REQUIRED IMPORTED_TARGET libdrm)
 
 if(DEFINED OPENVX_INCLUDES)
     message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
@@ -173,8 +175,12 @@ add_subdirectory 		(eigen)
 add_subdirectory 		(cpp/test)
 add_subdirectory 		(cpp/threads_affinity)
 
-#c
+# c
 add_subdirectory 		(c/test)
+
+# dma-buf
+add_subdirectory 		(dmabuf/drmtoy)
+add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
 
 
 # add_subdirectory 		(ft_test)
@@ -186,8 +192,7 @@ add_subdirectory 		(c/test)
 # VPI
 add_subdirectory 		(vpi/samples)
 
-# VPI
-add_subdirectory 		(egl/dma-buf-texture-sharing)
+
 
 message(STATUS)
 message(STATUS "General configuration for ${PROJECT_NAME}")
