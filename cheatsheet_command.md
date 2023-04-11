@@ -160,3 +160,10 @@ echo performance > /sys/class/devfreq/ff9a0000.gpu/governor
 ```
 sha512sum -c xxxx.sha512
 ```
+
+# gnome
+```
+gsettings set org.gnome.shell.extensions.desktop-icons show-trash false
+gsettings set org.gnome.shell.extensions.desktop-icons show-home false
+gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
+```
