@@ -35,27 +35,28 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 find_package(PkgConfig REQUIRED) # for some lib without cmakeconfig
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
-find_package(apriltag REQUIRED)
-find_package(vpi REQUIRED)
+# find_package(apriltag REQUIRED)
+# find_package(vpi REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
 pkg_check_modules(DRM REQUIRED IMPORTED_TARGET libdrm)
+pkg_check_modules(GBM REQUIRED IMPORTED_TARGET gbm)
 
-if(DEFINED OPENVX_INCLUDES)
-    message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
-    include_directories(${OPENVX_INCLUDES})
-else()
-    message(STATUS "OPENVX_INCLUDES: \t<empty>")
-endif()
+# if(DEFINED OPENVX_INCLUDES)
+#     message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
+#     include_directories(${OPENVX_INCLUDES})
+# else()
+#     message(STATUS "OPENVX_INCLUDES: \t<empty>")
+# endif()
 
-if(DEFINED OPENVX_LIBRARIES)
-    message(STATUS "OPENVX_LIBRARIES: \t${OPENVX_LIBRARIES}")
-else()
-    message(STATUS "OPENVX_LIBRARIES: \t<empty>")
-endif()
+# if(DEFINED OPENVX_LIBRARIES)
+#     message(STATUS "OPENVX_LIBRARIES: \t${OPENVX_LIBRARIES}")
+# else()
+#     message(STATUS "OPENVX_LIBRARIES: \t<empty>")
+# endif()
 
 
 # pkg_check_modules(BLAS REQUIRED IMPORTED_TARGET blas64)
@@ -115,8 +116,8 @@ endif()
 # add_subdirectory 		(opencl/clpeak)
 
 # openvx
-add_subdirectory 		(openvx/test)
-add_subdirectory 		(openvx/bubble-pop)
+# add_subdirectory 		(openvx/test)
+# add_subdirectory 		(openvx/bubble-pop)
 
 # opencv
 add_subdirectory 		(opencv/test)
@@ -135,7 +136,7 @@ add_subdirectory 		(opencv/test)
 # add_subdirectory 		(opencv/aruco)
 # add_subdirectory 		(opencv/maskImage)
 
-add_subdirectory 		(apriltag)
+# add_subdirectory 		(apriltag)
 
 # OpenMP
 add_subdirectory 		(openmp/fast_software_implementation)
@@ -181,6 +182,8 @@ add_subdirectory 		(c/test)
 # dma-buf
 add_subdirectory 		(dmabuf/drmtoy)
 add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
+add_subdirectory 		(dmabuf/gbm)
+add_subdirectory 		(dmabuf/test)
 
 
 # add_subdirectory 		(ft_test)
@@ -190,7 +193,7 @@ add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
 # add_subdirectory 		(msgpack)
 
 # VPI
-add_subdirectory 		(vpi/samples)
+# add_subdirectory 		(vpi/samples)
 
 
 

@@ -36,7 +36,8 @@
 #include <drm.h>
 #include <drm_mode.h>
 
-#include <linux/videodev2.h>
+//#include <linux/videodev2.h>
+#include "videodev2.h"
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
