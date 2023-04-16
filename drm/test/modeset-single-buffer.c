@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
 
 	res = drmModeGetResources(fd);
-	crtc_id = res->crtcs[0];
+	crtc_id = res->crtcs[1];
 	conn_id = res->connectors[1];
 
 	conn = drmModeGetConnector(fd, conn_id);

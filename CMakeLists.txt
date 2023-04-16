@@ -180,11 +180,13 @@ add_subdirectory 		(cpp/threads_affinity)
 add_subdirectory 		(c/test)
 
 # dma-buf
-add_subdirectory 		(dmabuf/drmtoy)
 add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
-add_subdirectory 		(dmabuf/gbm)
-add_subdirectory 		(dmabuf/test)
 
+# drm
+add_subdirectory 		(drm/drmtoy)
+add_subdirectory 		(drm/gbm)
+add_subdirectory 		(drm/test)
+add_subdirectory 		(drm/drm-howto)
 
 # add_subdirectory 		(ft_test)
 # add_subdirectory 		(glfw_test)
