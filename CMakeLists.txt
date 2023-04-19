@@ -43,7 +43,7 @@ find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
 pkg_check_modules(DRM REQUIRED IMPORTED_TARGET libdrm)
-pkg_check_modules(V4L2 REQUIRED IMPORTED_TARGET libv4l2)
+# pkg_check_modules(V4L2 REQUIRED IMPORTED_TARGET libv4l2)
 pkg_check_modules(GBM REQUIRED IMPORTED_TARGET gbm)
 
 # if(DEFINED OPENVX_INCLUDES)
