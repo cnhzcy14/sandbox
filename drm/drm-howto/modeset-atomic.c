@@ -65,13 +65,15 @@
  * and also in atomic page-flips (all planes updated in a single IOCTL).
  */
 
-struct drm_object {
+struct drm_object
+{
 	drmModeObjectProperties *props;
 	drmModePropertyRes **props_info;
 	uint32_t id;
 };
 
-struct modeset_buf {
+struct modeset_buf
+{
 	uint32_t width;
 	uint32_t height;
 	uint32_t stride;
@@ -81,7 +83,8 @@ struct modeset_buf {
 	uint32_t fb;
 };
 
-struct modeset_output {
+struct modeset_output
+{
 	struct modeset_output *next;
 
 	unsigned int front_buf;
@@ -114,7 +117,8 @@ static int modeset_open(int *out, const char *node)
 	uint64_t cap;
 
 	fd = open(node, O_RDWR | O_CLOEXEC);
-	if (fd < 0) {
+	if (fd < 0)
+	{
 		ret = -errno;
 		fprintf(stderr, "cannot open '%s': %m\n", node);
 		return ret;
@@ -126,7 +130,8 @@ static int modeset_open(int *out, const char *node)
 	 * works if this is set.
 	 */
 	ret = drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "failed to set universal planes cap, %d\n", ret);
 		return ret;
 	}
@@ -137,21 +142,24 @@ static int modeset_open(int *out, const char *node)
 	 * commands. This is also good for learning purposes.
 	 */
 	ret = drmSetClientCap(fd, DRM_CLIENT_CAP_ATOMIC, 1);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "failed to set atomic cap, %d", ret);
 		return ret;
 	}
 
-	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &cap) < 0 || !cap) {
+	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &cap) < 0 || !cap)
+	{
 		fprintf(stderr, "drm device '%s' does not support dumb buffers\n",
-			node);
+				node);
 		close(fd);
 		return -EOPNOTSUPP;
 	}
 
-	if (drmGetCap(fd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap) {
+	if (drmGetCap(fd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap)
+	{
 		fprintf(stderr, "drm device '%s' does not support atomic KMS\n",
-			node);
+				node);
 		close(fd);
 		return -EOPNOTSUPP;
 	}
@@ -167,7 +175,7 @@ static int modeset_open(int *out, const char *node)
  */
 
 static int64_t get_property_value(int fd, drmModeObjectPropertiesPtr props,
-				  const char *name)
+								  const char *name)
 {
 	drmModePropertyPtr prop;
 	uint64_t value;
@@ -175,9 +183,11 @@ static int64_t get_property_value(int fd, drmModeObjectPropertiesPtr props,
 	int j;
 
 	found = false;
-	for (j = 0; j < props->count_props && !found; j++) {
+	for (j = 0; j < props->count_props && !found; j++)
+	{
 		prop = drmModeGetProperty(fd, props->props[j]);
-		if (!strcmp(prop->name, name)) {
+		if (!strcmp(prop->name, name))
+		{
 			value = props->prop_values[j];
 			found = true;
 		}
@@ -195,29 +205,31 @@ static int64_t get_property_value(int fd, drmModeObjectPropertiesPtr props,
  */
 
 static void modeset_get_object_properties(int fd, struct drm_object *obj,
-					  uint32_t type)
+										  uint32_t type)
 {
 	const char *type_str;
 	unsigned int i;
 
 	obj->props = drmModeObjectGetProperties(fd, obj->id, type);
-	if (!obj->props) {
-		switch(type) {
-			case DRM_MODE_OBJECT_CONNECTOR:
-				type_str = "connector";
-				break;
-			case DRM_MODE_OBJECT_PLANE:
-				type_str = "plane";
-				break;
-			case DRM_MODE_OBJECT_CRTC:
-				type_str = "CRTC";
-				break;
-			default:
-				type_str = "unknown type";
-				break;
+	if (!obj->props)
+	{
+		switch (type)
+		{
+		case DRM_MODE_OBJECT_CONNECTOR:
+			type_str = "connector";
+			break;
+		case DRM_MODE_OBJECT_PLANE:
+			type_str = "plane";
+			break;
+		case DRM_MODE_OBJECT_CRTC:
+			type_str = "CRTC";
+			break;
+		default:
+			type_str = "unknown type";
+			break;
 		}
 		fprintf(stderr, "cannot get %s %d properties: %s\n",
-			type_str, obj->id, strerror(errno));
+				type_str, obj->id, strerror(errno));
 		return;
 	}
 
@@ -232,19 +244,22 @@ static void modeset_get_object_properties(int fd, struct drm_object *obj,
  */
 
 static int set_drm_object_property(drmModeAtomicReq *req, struct drm_object *obj,
-				   const char *name, uint64_t value)
+								   const char *name, uint64_t value)
 {
 	int i;
 	uint32_t prop_id = 0;
 
-	for (i = 0; i < obj->props->count_props; i++) {
-		if (!strcmp(obj->props_info[i]->name, name)) {
+	for (i = 0; i < obj->props->count_props; i++)
+	{
+		if (!strcmp(obj->props_info[i]->name, name))
+		{
 			prop_id = obj->props_info[i]->prop_id;
 			break;
 		}
 	}
 
-	if (prop_id == 0) {
+	if (prop_id == 0)
+	{
 		fprintf(stderr, "no object property: %s\n", name);
 		return -EINVAL;
 	}
@@ -258,7 +273,7 @@ static int set_drm_object_property(drmModeAtomicReq *req, struct drm_object *obj
  */
 
 static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
-			     struct modeset_output *out)
+							 struct modeset_output *out)
 {
 	drmModeEncoder *enc;
 	unsigned int i, j;
@@ -271,22 +286,29 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	else
 		enc = NULL;
 
-	if (enc) {
-		if (enc->crtc_id) {
+	if (enc)
+	{
+		if (enc->crtc_id)
+		{
 			crtc = enc->crtc_id;
-			for (iter = output_list; iter; iter = iter->next) {
-				if (iter->crtc.id == crtc) {
+			for (iter = output_list; iter; iter = iter->next)
+			{
+				if (iter->crtc.id == crtc)
+				{
 					crtc = 0;
 					break;
 				}
 			}
 
-			if (crtc > 0) {
+			if (crtc > 0)
+			{
 				drmModeFreeEncoder(enc);
 				out->crtc.id = crtc;
 				/* find the CRTC's index */
-				for (i = 0; i < res->count_crtcs; ++i) {
-					if (res->crtcs[i] == crtc) {
+				for (i = 0; i < res->count_crtcs; ++i)
+				{
+					if (res->crtcs[i] == crtc)
+					{
 						out->crtc_index = i;
 						break;
 					}
@@ -303,24 +325,29 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC.
 	 */
-	for (i = 0; i < conn->count_encoders; ++i) {
+	for (i = 0; i < conn->count_encoders; ++i)
+	{
 		enc = drmModeGetEncoder(fd, conn->encoders[i]);
-		if (!enc) {
+		if (!enc)
+		{
 			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
-				i, conn->encoders[i], errno);
+					i, conn->encoders[i], errno);
 			continue;
 		}
 
 		/* iterate all global CRTCs */
-		for (j = 0; j < res->count_crtcs; ++j) {
+		for (j = 0; j < res->count_crtcs; ++j)
+		{
 			/* check whether this CRTC works with the encoder */
 			if (!(enc->possible_crtcs & (1 << j)))
 				continue;
 
 			/* check that no other output already uses this CRTC */
 			crtc = res->crtcs[j];
-			for (iter = output_list; iter; iter = iter->next) {
-				if (iter->crtc.id == crtc) {
+			for (iter = output_list; iter; iter = iter->next)
+			{
+				if (iter->crtc.id == crtc)
+				{
 					crtc = 0;
 					break;
 				}
@@ -331,9 +358,11 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 			 * index (not its ID) will be used when searching for a
 			 * suitable plane.
 			 */
-			if (crtc > 0) {
+			if (crtc > 0)
+			{
 				fprintf(stdout, "crtc %u found for encoder %u, will need full modeset\n",
-					crtc, conn->encoders[i]);;
+						crtc, conn->encoders[i]);
+				;
 				drmModeFreeEncoder(enc);
 				out->crtc.id = crtc;
 				out->crtc_index = j;
@@ -345,7 +374,7 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	}
 
 	fprintf(stderr, "cannot find suitable crtc for connector %u\n",
-		conn->connector_id);
+			conn->connector_id);
 	return -ENOENT;
 }
 
@@ -361,25 +390,29 @@ static int modeset_find_plane(int fd, struct modeset_output *out)
 	int i, ret = -EINVAL;
 
 	plane_res = drmModeGetPlaneResources(fd);
-	if (!plane_res) {
+	if (!plane_res)
+	{
 		fprintf(stderr, "drmModeGetPlaneResources failed: %s\n",
 				strerror(errno));
 		return -ENOENT;
 	}
 
 	/* iterates through all planes of a certain device */
-	for (i = 0; (i < plane_res->count_planes) && !found_primary; i++) {
+	for (i = 0; (i < plane_res->count_planes) && !found_primary; i++)
+	{
 		int plane_id = plane_res->planes[i];
 
 		drmModePlanePtr plane = drmModeGetPlane(fd, plane_id);
-		if (!plane) {
+		if (!plane)
+		{
 			fprintf(stderr, "drmModeGetPlane(%u) failed: %s\n", plane_id,
 					strerror(errno));
 			continue;
 		}
 
 		/* check if the plane can be used by our CRTC */
-		if (plane->possible_crtcs & (1 << out->crtc_index)) {
+		if (plane->possible_crtcs & (1 << out->crtc_index))
+		{
 			drmModeObjectPropertiesPtr props =
 				drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
 
@@ -398,7 +431,8 @@ static int modeset_find_plane(int fd, struct modeset_output *out)
 			 * in order to not break userspace, some properties were
 			 * left in the UAPI headers as well.
 			 */
-			if (get_property_value(fd, props, "type") == DRM_PLANE_TYPE_PRIMARY) {
+			if (get_property_value(fd, props, "type") == DRM_PLANE_TYPE_PRIMARY)
+			{
 				found_primary = true;
 				out->plane.id = plane_id;
 				ret = 0;
@@ -500,9 +534,10 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 	creq.height = buf->height;
 	creq.bpp = 32;
 	ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "cannot create dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		return -errno;
 	}
 	buf->stride = creq.pitch;
@@ -513,10 +548,11 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 	handles[0] = buf->handle;
 	pitches[0] = buf->stride;
 	ret = drmModeAddFB2(fd, buf->width, buf->height, DRM_FORMAT_XRGB8888,
-			    handles, pitches, offsets, &buf->fb, 0);
-	if (ret) {
+						handles, pitches, offsets, &buf->fb, 0);
+	if (ret)
+	{
 		fprintf(stderr, "cannot create framebuffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_destroy;
 	}
@@ -525,19 +561,21 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.handle = buf->handle;
 	ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot map dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_fb;
 	}
 
 	/* perform actual memory mapping */
 	buf->map = mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		        fd, mreq.offset);
-	if (buf->map == MAP_FAILED) {
+					fd, mreq.offset);
+	if (buf->map == MAP_FAILED)
+	{
 		fprintf(stderr, "cannot mmap dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_fb;
 	}
@@ -583,12 +621,13 @@ static void modeset_destroy_fb(int fd, struct modeset_buf *buf)
  */
 
 static int modeset_setup_framebuffers(int fd, drmModeConnector *conn,
-				      struct modeset_output *out)
+									  struct modeset_output *out)
 {
 	int i, ret;
 
 	/* setup the front and back framebuffers */
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 2; i++)
+	{
 
 		/* copy mode info to buffer */
 		out->bufs[i].width = conn->modes[0].hdisplay;
@@ -596,7 +635,8 @@ static int modeset_setup_framebuffers(int fd, drmModeConnector *conn,
 
 		/* create a framebuffer for the buffer */
 		ret = modeset_create_fb(fd, &out->bufs[i]);
-		if (ret) {
+		if (ret)
+		{
 			/* the second framebuffer creation failed, so
 			 * we have to destroy the first before returning */
 			if (i == 1)
@@ -645,7 +685,7 @@ static void modeset_output_destroy(int fd, struct modeset_output *out)
  */
 
 static struct modeset_output *modeset_output_create(int fd, drmModeRes *res,
-						    drmModeConnector *conn)
+													drmModeConnector *conn)
 {
 	int ret;
 	struct modeset_output *out;
@@ -656,16 +696,18 @@ static struct modeset_output *modeset_output_create(int fd, drmModeRes *res,
 	out->connector.id = conn->connector_id;
 
 	/* check if a monitor is connected */
-	if (conn->connection != DRM_MODE_CONNECTED) {
+	if (conn->connection != DRM_MODE_CONNECTED)
+	{
 		fprintf(stderr, "ignoring unused connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		goto out_error;
 	}
 
 	/* check if there is at least one valid mode */
-	if (conn->count_modes == 0) {
+	if (conn->count_modes == 0)
+	{
 		fprintf(stderr, "no valid mode for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		goto out_error;
 	}
 
@@ -673,40 +715,45 @@ static struct modeset_output *modeset_output_create(int fd, drmModeRes *res,
 	memcpy(&out->mode, &conn->modes[0], sizeof(out->mode));
 	/* create the blob property using out->mode and save its id in the output*/
 	if (drmModeCreatePropertyBlob(fd, &out->mode, sizeof(out->mode),
-	                              &out->mode_blob_id) != 0) {
+								  &out->mode_blob_id) != 0)
+	{
 		fprintf(stderr, "couldn't create a blob property\n");
 		goto out_error;
 	}
 	fprintf(stderr, "mode for connector %u is %ux%u\n",
-	        conn->connector_id, out->bufs[0].width, out->bufs[0].height);
+			conn->connector_id, out->bufs[0].width, out->bufs[0].height);
 
 	/* find a crtc for this connector */
 	ret = modeset_find_crtc(fd, res, conn, out);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "no valid crtc for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		goto out_blob;
 	}
 
 	/* with a connector and crtc, find a primary plane */
 	ret = modeset_find_plane(fd, out);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "no valid plane for crtc %u\n", out->crtc.id);
 		goto out_blob;
 	}
 
 	/* gather properties of our connector, CRTC and planes */
 	ret = modeset_setup_objects(fd, out);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot get plane properties\n");
 		goto out_blob;
 	}
 
 	/* setup front/back framebuffers for this CRTC */
 	ret = modeset_setup_framebuffers(fd, conn, out);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot create framebuffers for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		goto out_obj;
 	}
 
@@ -735,19 +782,22 @@ static int modeset_prepare(int fd)
 
 	/* retrieve resources */
 	res = drmModeGetResources(fd);
-	if (!res) {
+	if (!res)
+	{
 		fprintf(stderr, "cannot retrieve DRM resources (%d): %m\n",
-			errno);
+				errno);
 		return -errno;
 	}
 
 	/* iterate all connectors */
-	for (i = 0; i < res->count_connectors; ++i) {
+	for (i = 0; i < res->count_connectors; ++i)
+	{
 		/* get information for each connector */
 		conn = drmModeGetConnector(fd, res->connectors[i]);
-		if (!conn) {
+		if (!conn)
+		{
 			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
-				i, res->connectors[i], errno);
+					i, res->connectors[i], errno);
 			continue;
 		}
 
@@ -761,7 +811,8 @@ static int modeset_prepare(int fd)
 		out->next = output_list;
 		output_list = out;
 	}
-	if (!output_list) {
+	if (!output_list)
+	{
 		fprintf(stderr, "couldn't create any outputs\n");
 		return -1;
 	}
@@ -779,7 +830,7 @@ static int modeset_prepare(int fd)
  */
 
 static int modeset_atomic_prepare_commit(int fd, struct modeset_output *out,
-					 drmModeAtomicReq *req)
+										 drmModeAtomicReq *req)
 {
 	struct drm_object *plane = &out->plane;
 	struct modeset_buf *buf = &out->bufs[out->front_buf ^ 1];
@@ -832,7 +883,8 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 	uint8_t next;
 
 	next = cur + (*up ? 1 : -1) * (rand() % mod);
-	if ((*up && next < cur) || (!*up && next > cur)) {
+	if ((*up && next < cur) || (!*up && next > cur))
+	{
 		*up = !*up;
 		next = cur;
 	}
@@ -854,14 +906,15 @@ static void modeset_paint_framebuffer(struct modeset_output *out)
 	out->g = next_color(&out->g_up, out->g, 5);
 	out->b = next_color(&out->b_up, out->b, 5);
 	buf = &out->bufs[out->front_buf ^ 1];
-	for (j = 0; j < buf->height; ++j) {
-		for (k = 0; k < buf->width; ++k) {
+	for (j = 0; j < buf->height; ++j)
+	{
+		for (k = 0; k < buf->width; ++k)
+		{
 			off = buf->stride * j + k * 4;
-			*(uint32_t*)&buf->map[off] =
-				     (out->r << 16) | (out->g << 8) | out->b;
+			*(uint32_t *)&buf->map[off] =
+				(out->r << 16) | (out->g << 8) | out->b;
 		}
 	}
-
 }
 
 /*
@@ -907,7 +960,8 @@ static void modeset_draw_out(int fd, struct modeset_output *out)
 	/* prepare output for atomic commit */
 	req = drmModeAtomicAlloc();
 	ret = modeset_atomic_prepare_commit(fd, out, req);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "prepare atomic commit failed, %d\n", errno);
 		return;
 	}
@@ -930,7 +984,8 @@ static void modeset_draw_out(int fd, struct modeset_output *out)
 	ret = drmModeAtomicCommit(fd, req, flags, NULL);
 	drmModeAtomicFree(req);
 
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "atomic commit failed, %d\n", errno);
 		return;
 	}
@@ -946,15 +1001,17 @@ static void modeset_draw_out(int fd, struct modeset_output *out)
  */
 
 static void modeset_page_flip_event(int fd, unsigned int frame,
-				    unsigned int sec, unsigned int usec,
-				    unsigned int crtc_id, void *data)
+									unsigned int sec, unsigned int usec,
+									unsigned int crtc_id, void *data)
 {
 	struct modeset_output *out, *iter;
 
 	/* find the output responsible for this event */
 	out = NULL;
-	for (iter = output_list; iter; iter = iter->next) {
-		if (iter->crtc.id == crtc_id) {
+	for (iter = output_list; iter; iter = iter->next)
+	{
+		if (iter->crtc.id == crtc_id)
+		{
 			out = iter;
 			break;
 		}
@@ -989,12 +1046,14 @@ static int modeset_perform_modeset(int fd)
 
 	/* prepare modeset on all outputs */
 	req = drmModeAtomicAlloc();
-	for (iter = output_list; iter; iter = iter->next) {
+	for (iter = output_list; iter; iter = iter->next)
+	{
 		ret = modeset_atomic_prepare_commit(fd, iter, req);
 		if (ret < 0)
 			break;
 	}
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "prepare atomic commit failed, %d\n", errno);
 		return ret;
 	}
@@ -1002,14 +1061,16 @@ static int modeset_perform_modeset(int fd)
 	/* perform test-only atomic commit */
 	flags = DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET;
 	ret = drmModeAtomicCommit(fd, req, flags, NULL);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "test-only atomic commit failed, %d\n", errno);
 		drmModeAtomicFree(req);
 		return ret;
 	}
 
 	/* draw on back framebuffer of all outputs */
-	for (iter = output_list; iter; iter = iter->next) {
+	for (iter = output_list; iter; iter = iter->next)
+	{
 
 		/* colors initialization, this is the first time we're drawing */
 		iter->r = rand() % 0xff;
@@ -1077,19 +1138,25 @@ static void modeset_draw(int fd)
 	modeset_perform_modeset(fd);
 
 	/* wait 5s for VBLANK or input events */
-	while (time(&cur) < start + 5) {
+	while (time(&cur) < start + 5)
+	{
 		FD_SET(0, &fds);
 		FD_SET(fd, &fds);
 		v.tv_sec = start + 5 - cur;
 
 		ret = select(fd + 1, &fds, NULL, NULL, &v);
-		if (ret < 0) {
+		if (ret < 0)
+		{
 			fprintf(stderr, "select() failed with %d: %m\n", errno);
 			break;
-		} else if (FD_ISSET(0, &fds)) {
+		}
+		else if (FD_ISSET(0, &fds))
+		{
 			fprintf(stderr, "exit due to user-input\n");
 			break;
-		} else if (FD_ISSET(fd, &fds)) {
+		}
+		else if (FD_ISSET(fd, &fds))
+		{
 			/* read the fd looking for events and handle each event
 			 * by calling modeset_page_flip_event() */
 			drmHandleEvent(fd, &ev);
@@ -1112,14 +1179,16 @@ static void modeset_cleanup(int fd)
 	ev.version = 3;
 	ev.page_flip_handler2 = modeset_page_flip_event;
 
-	while (output_list) {
+	while (output_list)
+	{
 		/* get first output from list */
 		iter = output_list;
 
 		/* if a page-flip is pending, wait for it to complete */
 		iter->cleanup = true;
 		fprintf(stderr, "wait for pending page-flip to complete...\n");
-		while (iter->pflip_pending) {
+		while (iter->pflip_pending)
+		{
 			ret = drmHandleEvent(fd, &ev);
 			if (ret)
 				break;
@@ -1173,10 +1242,13 @@ int main(int argc, char **argv)
 out_close:
 	close(fd);
 out_return:
-	if (ret) {
+	if (ret)
+	{
 		errno = -ret;
 		fprintf(stderr, "modeset failed with error %d: %m\n", errno);
-	} else {
+	}
+	else
+	{
 		fprintf(stderr, "exiting\n");
 	}
 	return ret;

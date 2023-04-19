@@ -38,11 +38,11 @@
 struct modeset_buf;
 struct modeset_dev;
 static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
-			     struct modeset_dev *dev);
+							 struct modeset_dev *dev);
 static int modeset_create_fb(int fd, struct modeset_buf *buf);
 static void modeset_destroy_fb(int fd, struct modeset_buf *buf);
 static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
-			     struct modeset_dev *dev);
+							 struct modeset_dev *dev);
 static int modeset_open(int *out, const char *node);
 static int modeset_prepare(int fd);
 static void modeset_draw(int fd);
@@ -59,16 +59,18 @@ static int modeset_open(int *out, const char *node)
 	uint64_t has_dumb;
 
 	fd = open(node, O_RDWR | O_CLOEXEC);
-	if (fd < 0) {
+	if (fd < 0)
+	{
 		ret = -errno;
 		fprintf(stderr, "cannot open '%s': %m\n", node);
 		return ret;
 	}
 
 	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 ||
-	    !has_dumb) {
+		!has_dumb)
+	{
 		fprintf(stderr, "drm device '%s' does not support dumb buffers\n",
-			node);
+				node);
 		close(fd);
 		return -EOPNOTSUPP;
 	}
@@ -92,7 +94,8 @@ static int modeset_open(int *out, const char *node)
  * routines.
  */
 
-struct modeset_buf {
+struct modeset_buf
+{
 	uint32_t width;
 	uint32_t height;
 	uint32_t stride;
@@ -102,7 +105,8 @@ struct modeset_buf {
 	uint32_t fb;
 };
 
-struct modeset_dev {
+struct modeset_dev
+{
 	struct modeset_dev *next;
 
 	unsigned int front_buf;
@@ -136,19 +140,22 @@ static int modeset_prepare(int fd)
 
 	/* retrieve resources */
 	res = drmModeGetResources(fd);
-	if (!res) {
+	if (!res)
+	{
 		fprintf(stderr, "cannot retrieve DRM resources (%d): %m\n",
-			errno);
+				errno);
 		return -errno;
 	}
 
 	/* iterate all connectors */
-	for (i = 0; i < res->count_connectors; ++i) {
+	for (i = 0; i < res->count_connectors; ++i)
+	{
 		/* get information for each connector */
 		conn = drmModeGetConnector(fd, res->connectors[i]);
-		if (!conn) {
+		if (!conn)
+		{
 			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
-				i, res->connectors[i], errno);
+					i, res->connectors[i], errno);
 			continue;
 		}
 
@@ -159,11 +166,13 @@ static int modeset_prepare(int fd)
 
 		/* call helper function to prepare this connector */
 		ret = modeset_setup_dev(fd, res, conn, dev);
-		if (ret) {
-			if (ret != -ENOENT) {
+		if (ret)
+		{
+			if (ret != -ENOENT)
+			{
 				errno = -ret;
 				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
-					i, res->connectors[i], errno);
+						i, res->connectors[i], errno);
 			}
 			free(dev);
 			drmModeFreeConnector(conn);
@@ -186,21 +195,23 @@ static int modeset_prepare(int fd)
  */
 
 static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
-			     struct modeset_dev *dev)
+							 struct modeset_dev *dev)
 {
 	int ret;
 
 	/* check if a monitor is connected */
-	if (conn->connection != DRM_MODE_CONNECTED) {
+	if (conn->connection != DRM_MODE_CONNECTED)
+	{
 		fprintf(stderr, "ignoring unused connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		return -ENOENT;
 	}
 
 	/* check if there is at least one valid mode */
-	if (conn->count_modes == 0) {
+	if (conn->count_modes == 0)
+	{
 		fprintf(stderr, "no valid mode for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		return -EFAULT;
 	}
 
@@ -212,29 +223,32 @@ static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
 	dev->bufs[1].width = conn->modes[0].hdisplay;
 	dev->bufs[1].height = conn->modes[0].vdisplay;
 	fprintf(stderr, "mode for connector %u is %ux%u\n",
-		conn->connector_id, dev->bufs[0].width, dev->bufs[0].height);
+			conn->connector_id, dev->bufs[0].width, dev->bufs[0].height);
 
 	/* find a crtc for this connector */
 	ret = modeset_find_crtc(fd, res, conn, dev);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "no valid crtc for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		return ret;
 	}
 
 	/* create framebuffer #1 for this CRTC */
 	ret = modeset_create_fb(fd, &dev->bufs[0]);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		return ret;
 	}
 
 	/* create framebuffer #2 for this CRTC */
 	ret = modeset_create_fb(fd, &dev->bufs[1]);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
-			conn->connector_id);
+				conn->connector_id);
 		modeset_destroy_fb(fd, &dev->bufs[0]);
 		return ret;
 	}
@@ -247,7 +261,7 @@ static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
  */
 
 static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
-			     struct modeset_dev *dev)
+							 struct modeset_dev *dev)
 {
 	drmModeEncoder *enc;
 	unsigned int i, j;
@@ -260,17 +274,22 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	else
 		enc = NULL;
 
-	if (enc) {
-		if (enc->crtc_id) {
+	if (enc)
+	{
+		if (enc->crtc_id)
+		{
 			crtc = enc->crtc_id;
-			for (iter = modeset_list; iter; iter = iter->next) {
-				if (iter->crtc == crtc) {
+			for (iter = modeset_list; iter; iter = iter->next)
+			{
+				if (iter->crtc == crtc)
+				{
 					crtc = -1;
 					break;
 				}
 			}
 
-			if (crtc >= 0) {
+			if (crtc >= 0)
+			{
 				drmModeFreeEncoder(enc);
 				dev->crtc = crtc;
 				return 0;
@@ -284,31 +303,37 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	 * encoder+crtc is already used by another connector (actually unlikely
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC. */
-	for (i = 0; i < conn->count_encoders; ++i) {
+	for (i = 0; i < conn->count_encoders; ++i)
+	{
 		enc = drmModeGetEncoder(fd, conn->encoders[i]);
-		if (!enc) {
+		if (!enc)
+		{
 			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
-				i, conn->encoders[i], errno);
+					i, conn->encoders[i], errno);
 			continue;
 		}
 
 		/* iterate all global CRTCs */
-		for (j = 0; j < res->count_crtcs; ++j) {
+		for (j = 0; j < res->count_crtcs; ++j)
+		{
 			/* check whether this CRTC works with the encoder */
 			if (!(enc->possible_crtcs & (1 << j)))
 				continue;
 
 			/* check that no other device already uses this CRTC */
 			crtc = res->crtcs[j];
-			for (iter = modeset_list; iter; iter = iter->next) {
-				if (iter->crtc == crtc) {
+			for (iter = modeset_list; iter; iter = iter->next)
+			{
+				if (iter->crtc == crtc)
+				{
 					crtc = -1;
 					break;
 				}
 			}
 
 			/* we have found a CRTC, so save it and return */
-			if (crtc >= 0) {
+			if (crtc >= 0)
+			{
 				drmModeFreeEncoder(enc);
 				dev->crtc = crtc;
 				return 0;
@@ -319,7 +344,7 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 	}
 
 	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
-		conn->connector_id);
+			conn->connector_id);
 	return -ENOENT;
 }
 
@@ -340,9 +365,10 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 	creq.height = buf->height;
 	creq.bpp = 32;
 	ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "cannot create dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		return -errno;
 	}
 	buf->stride = creq.pitch;
@@ -351,10 +377,11 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 
 	/* create framebuffer object for the dumb-buffer */
 	ret = drmModeAddFB(fd, buf->width, buf->height, 24, 32, buf->stride,
-			   buf->handle, &buf->fb);
-	if (ret) {
+					   buf->handle, &buf->fb);
+	if (ret)
+	{
 		fprintf(stderr, "cannot create framebuffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_destroy;
 	}
@@ -363,19 +390,21 @@ static int modeset_create_fb(int fd, struct modeset_buf *buf)
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.handle = buf->handle;
 	ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
-	if (ret) {
+	if (ret)
+	{
 		fprintf(stderr, "cannot map dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_fb;
 	}
 
 	/* perform actual memory mapping */
 	buf->map = mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		        fd, mreq.offset);
-	if (buf->map == MAP_FAILED) {
+					fd, mreq.offset);
+	if (buf->map == MAP_FAILED)
+	{
 		fprintf(stderr, "cannot mmap dumb buffer (%d): %m\n",
-			errno);
+				errno);
 		ret = -errno;
 		goto err_fb;
 	}
@@ -444,14 +473,15 @@ int main(int argc, char **argv)
 		goto out_close;
 
 	/* perform actual modesetting on each found connector+CRTC */
-	for (iter = modeset_list; iter; iter = iter->next) {
+	for (iter = modeset_list; iter; iter = iter->next)
+	{
 		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
 		buf = &iter->bufs[iter->front_buf];
 		ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
-				     &iter->conn, 1, &iter->mode);
+							 &iter->conn, 1, &iter->mode);
 		if (ret)
 			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-				iter->conn, errno);
+					iter->conn, errno);
 	}
 
 	/* draw some colors for 5seconds */
@@ -465,10 +495,13 @@ int main(int argc, char **argv)
 out_close:
 	close(fd);
 out_return:
-	if (ret) {
+	if (ret)
+	{
 		errno = -ret;
 		fprintf(stderr, "modeset failed with error %d: %m\n", errno);
-	} else {
+	}
+	else
+	{
 		fprintf(stderr, "exiting\n");
 	}
 	return ret;
@@ -483,8 +516,8 @@ out_return:
  */
 
 static void modeset_page_flip_event(int fd, unsigned int frame,
-				    unsigned int sec, unsigned int usec,
-				    void *data)
+									unsigned int sec, unsigned int usec,
+									void *data)
 {
 	struct modeset_dev *dev = data;
 
@@ -561,11 +594,12 @@ static void modeset_draw(int fd)
 	memset(&ev, 0, sizeof(ev));
 	/* Set this to only the latest version you support. Version 2
 	 * introduced the page_flip_handler, so we use that. */
-	ev.version = 2;
+	ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = modeset_page_flip_event;
 
 	/* redraw all outputs */
-	for (iter = modeset_list; iter; iter = iter->next) {
+	for (iter = modeset_list; iter; iter = iter->next)
+	{
 		iter->r = rand() % 0xff;
 		iter->g = rand() % 0xff;
 		iter->b = rand() % 0xff;
@@ -575,19 +609,25 @@ static void modeset_draw(int fd)
 	}
 
 	/* wait 5s for VBLANK or input events */
-	while (time(&cur) < start + 5) {
+	while (time(&cur) < start + 5)
+	{
 		FD_SET(0, &fds);
 		FD_SET(fd, &fds);
 		v.tv_sec = start + 5 - cur;
 
 		ret = select(fd + 1, &fds, NULL, NULL, &v);
-		if (ret < 0) {
+		if (ret < 0)
+		{
 			fprintf(stderr, "select() failed with %d: %m\n", errno);
 			break;
-		} else if (FD_ISSET(0, &fds)) {
+		}
+		else if (FD_ISSET(0, &fds))
+		{
 			fprintf(stderr, "exit due to user-input\n");
 			break;
-		} else if (FD_ISSET(fd, &fds)) {
+		}
+		else if (FD_ISSET(fd, &fds))
+		{
 			drmHandleEvent(fd, &ev);
 		}
 	}
@@ -603,7 +643,8 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
 	uint8_t next;
 
 	next = cur + (*up ? 1 : -1) * (rand() % mod);
-	if ((*up && next < cur) || (!*up && next > cur)) {
+	if ((*up && next < cur) || (!*up && next > cur))
+	{
 		*up = !*up;
 		next = cur;
 	}
@@ -659,20 +700,25 @@ static void modeset_draw_dev(int fd, struct modeset_dev *dev)
 	dev->b = next_color(&dev->b_up, dev->b, 5);
 
 	buf = &dev->bufs[dev->front_buf ^ 1];
-	for (j = 0; j < buf->height; ++j) {
-		for (k = 0; k < buf->width; ++k) {
+	for (j = 0; j < buf->height; ++j)
+	{
+		for (k = 0; k < buf->width; ++k)
+		{
 			off = buf->stride * j + k * 4;
-			*(uint32_t*)&buf->map[off] =
-				     (dev->r << 16) | (dev->g << 8) | dev->b;
+			*(uint32_t *)&buf->map[off] =
+				(dev->r << 16) | (dev->g << 8) | dev->b;
 		}
 	}
 
 	ret = drmModePageFlip(fd, dev->crtc, buf->fb,
-			      DRM_MODE_PAGE_FLIP_EVENT, dev);
-	if (ret) {
+						  DRM_MODE_PAGE_FLIP_EVENT, dev);
+	if (ret)
+	{
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
-			dev->conn, errno);
-	} else {
+				dev->conn, errno);
+	}
+	else
+	{
 		dev->front_buf ^= 1;
 		dev->pflip_pending = true;
 	}
@@ -702,7 +748,8 @@ static void modeset_cleanup(int fd)
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = modeset_page_flip_event;
 
-	while (modeset_list) {
+	while (modeset_list)
+	{
 		/* remove from global list */
 		iter = modeset_list;
 		modeset_list = iter->next;
@@ -710,7 +757,8 @@ static void modeset_cleanup(int fd)
 		/* if a pageflip is pending, wait for it to complete */
 		iter->cleanup = true;
 		fprintf(stderr, "wait for pending page-flip to complete...\n");
-		while (iter->pflip_pending) {
+		while (iter->pflip_pending)
+		{
 			ret = drmHandleEvent(fd, &ev);
 			if (ret)
 				break;
@@ -719,13 +767,13 @@ static void modeset_cleanup(int fd)
 		/* restore saved CRTC configuration */
 		if (!iter->pflip_pending)
 			drmModeSetCrtc(fd,
-				       iter->saved_crtc->crtc_id,
-				       iter->saved_crtc->buffer_id,
-				       iter->saved_crtc->x,
-				       iter->saved_crtc->y,
-				       &iter->conn,
-				       1,
-				       &iter->saved_crtc->mode);
+						   iter->saved_crtc->crtc_id,
+						   iter->saved_crtc->buffer_id,
+						   iter->saved_crtc->x,
+						   iter->saved_crtc->y,
+						   &iter->conn,
+						   1,
+						   &iter->saved_crtc->mode);
 		drmModeFreeCrtc(iter->saved_crtc);
 
 		/* destroy framebuffers */
