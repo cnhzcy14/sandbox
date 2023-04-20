@@ -17,7 +17,7 @@
  * limitations under the License.
  *
  */
-
+#define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
@@ -216,7 +216,7 @@ static int buffer_create(struct buffer *b, int drmfd, struct setup *s,
 	memset(&prime, 0, sizeof prime);
 	prime.handle = b->bo_handle;
 
-	ret = drmIoctl(drmfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime);
+  	ret = drmPrimeHandleToFD (drmfd, prime.handle, DRM_CLOEXEC | DRM_RDWR, &prime.fd);
 	if (WARN_ON(ret, "PRIME_HANDLE_TO_FD failed: %s\n", ERRSTR))
 		goto fail_gem;
 	printf("dbuf_fd = %d\n", prime.fd);
