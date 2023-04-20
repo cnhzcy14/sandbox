@@ -31,13 +31,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
+#include <getopt.h>
 
 #include <drm.h>
 #include <drm_mode.h>
 
 #include <linux/videodev2.h>
-// #include "videodev2.h"
+#include <libv4l2.h>
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -71,41 +71,9 @@ static inline int warn(const char *file, int line, const char *fmt, ...)
 #define WARN_ON(cond, ...) \
 	((cond) ? warn(__FILE__, __LINE__, __VA_ARGS__) : 0)
 
-struct crtc {
-	drmModeCrtc *crtc;
-	drmModeObjectProperties *props;
-	drmModePropertyRes **props_info;
-};
-
-struct encoder {
-	drmModeEncoder *encoder;
-};
-
-struct connector {
-	drmModeConnector *connector;
-	drmModeObjectProperties *props;
-	drmModePropertyRes **props_info;
-};
-
-struct plane {
-        drmModePlane *plane;
-        drmModeObjectProperties *props;
-        drmModePropertyRes **props_info;
-};
-
-struct resources {
-	int fd;
-	drmModeResPtr res;
-	drmModePlaneResPtr plane_res;
-	struct crtc *crtcs;
-	struct encoder *encoders;
-	struct connector *connectors;
-	struct plane *planes;
-};
-
 struct setup {
 	char module[32];
-	uint32_t conId;
+	int conId;
 	uint32_t crtcId;
 	int crtcIdx;
 	uint32_t planeId;
@@ -115,7 +83,6 @@ struct setup {
 	unsigned int in_fourcc;
 	unsigned int out_fourcc;
 	unsigned int buffer_count;
-	unsigned int times;
 	unsigned int use_crop : 1;
 	unsigned int use_compose : 1;
 	struct v4l2_rect crop;
@@ -126,13 +93,12 @@ struct buffer {
 	unsigned int bo_handle;
 	unsigned int fb_handle;
 	int dbuf_fd;
-	int queued_in_v4l2;
-	int v4l2_out_fence;
-	int drm_out_fence;
 };
 
 struct stream {
-	int drm_next;
+	int v4lfd;
+	int current_buffer;
+	int buffer_count;
 	struct buffer *buffer;
 } stream;
 
@@ -148,7 +114,6 @@ static void usage(char *name)
 	fprintf(stderr, "\t-s <width,height>@<left,top>\tset crop area\n");
 	fprintf(stderr, "\t-t <width,height>@<left,top>\tset compose area\n");
 	fprintf(stderr, "\t-b buffer_count\tset number of buffers\n");
-	fprintf(stderr, "\t-n <times>\tnumber of iterations in the pipeline\n");
 	fprintf(stderr, "\t-h\tshow this help\n");
 	fprintf(stderr, "\n\tDefault is to dump all info.\n");
 }
@@ -167,7 +132,7 @@ static int parse_args(int argc, char *argv[], struct setup *s)
 	int c, ret;
 	memset(s, 0, sizeof(*s));
 
-	while ((c = getopt(argc, argv, "M:o:i:S:f:F:s:t:b:n:h")) != -1) {
+	while ((c = getopt(argc, argv, "M:o:i:S:f:F:s:t:b:h")) != -1) {
 		switch (c) {
 		case 'M':
 			strncpy(s->module, optarg, 31);
@@ -219,11 +184,6 @@ static int parse_args(int argc, char *argv[], struct setup *s)
 			if (WARN_ON(ret != 1, "incorrect buffer count\n"))
 				return -1;
 			break;
-		case 'n':
-			ret = sscanf(optarg, "%u", &s->times);
-			if (WARN_ON(ret != 1, "incorrect number of times to run\n"))
-				return -1;
-			break;
 		case '?':
 		case 'h':
 			usage(argv[0]);
@@ -246,7 +206,7 @@ static int buffer_create(struct buffer *b, int drmfd, struct setup *s,
 	gem.height = s->h;
 	gem.bpp = 32;
 	gem.size = size;
-	ret = ioctl(drmfd, DRM_IOCTL_MODE_CREATE_DUMB, &gem);
+	ret = drmIoctl(drmfd, DRM_IOCTL_MODE_CREATE_DUMB, &gem);
 	if (WARN_ON(ret, "CREATE_DUMB failed: %s\n", ERRSTR))
 		return -1;
 	printf("bo %u %ux%u bpp %u size %lu (%lu)\n", gem.handle, gem.width, gem.height, gem.bpp, (long)gem.size, (long)size);
@@ -256,7 +216,7 @@ static int buffer_create(struct buffer *b, int drmfd, struct setup *s,
 	memset(&prime, 0, sizeof prime);
 	prime.handle = b->bo_handle;
 
-	ret = ioctl(drmfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime);
+	ret = drmIoctl(drmfd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime);
 	if (WARN_ON(ret, "PRIME_HANDLE_TO_FD failed: %s\n", ERRSTR))
 		goto fail_gem;
 	printf("dbuf_fd = %d\n", prime.fd);
@@ -288,30 +248,37 @@ fail_prime:
 fail_gem:
 	memset(&gem_destroy, 0, sizeof gem_destroy);
 	gem_destroy.handle = b->bo_handle,
-	ret = ioctl(drmfd, DRM_IOCTL_MODE_DESTROY_DUMB, &gem_destroy);
+	ret = drmIoctl(drmfd, DRM_IOCTL_MODE_DESTROY_DUMB, &gem_destroy);
 	WARN_ON(ret, "DESTROY_DUMB failed: %s\n", ERRSTR);
 
 	return -1;
 }
 
-static int find_crtc(struct resources *res, struct setup *s)
+static int find_crtc(int drmfd, struct setup *s, uint32_t *con)
 {
 	int ret = -1;
 	int i;
+	drmModeRes *res = drmModeGetResources(drmfd);
+	if (WARN_ON(!res, "drmModeGetResources failed: %s\n", ERRSTR))
+		return -1;
+
+	if (WARN_ON(res->count_crtcs <= 0, "drm: no crts\n"))
+		goto fail_res;
 
 	if (!s->conId) {
 		fprintf(stderr,
 			"No connector ID specified.  Choosing default from list:\n");
 
-		for (i = 0; i < res->res->count_connectors; i++) {
-			drmModeConnector *con = res->connectors[i].connector;
+		for (i = 0; i < res->count_connectors; i++) {
+			drmModeConnector *con =
+				drmModeGetConnector(drmfd, res->connectors[i]);
 			drmModeEncoder *enc = NULL;
 			drmModeCrtc *crtc = NULL;
 
 			if (con->encoder_id) {
-				enc = drmModeGetEncoder(res->fd, con->encoder_id);
+				enc = drmModeGetEncoder(drmfd, con->encoder_id);
 				if (enc->crtc_id) {
-					crtc = drmModeGetCrtc(res->fd, enc->crtc_id);
+					crtc = drmModeGetCrtc(drmfd, enc->crtc_id);
 				}
 			}
 
@@ -326,7 +293,7 @@ static int find_crtc(struct resources *res, struct setup *s)
 			       con->connector_type,
 			       crtc ? crtc->width : 0,
 			       crtc ? crtc->height : 0,
-			       (s->conId == con->connector_id ?
+			       (s->conId == (int)con->connector_id ?
 				" (chosen)" : ""));
 		}
 
@@ -339,40 +306,29 @@ static int find_crtc(struct resources *res, struct setup *s)
 
 	s->crtcIdx = -1;
 
-	for (i = 0; i < res->res->count_crtcs; ++i) {
-		if (s->crtcId == res->res->crtcs[i]) {
+	for (i = 0; i < res->count_crtcs; ++i) {
+		if (s->crtcId == res->crtcs[i]) {
 			s->crtcIdx = i;
 			break;
 		}
 	}
 
 	if (WARN_ON(s->crtcIdx == -1, "drm: CRTC %u not found\n", s->crtcId))
-		return ret;
+		goto fail_res;
 
-	if (WARN_ON(res->res->count_connectors <= 0, "drm: no connectors\n"))
-		return ret;
+	if (WARN_ON(res->count_connectors <= 0, "drm: no connectors\n"))
+		goto fail_res;
 
-	drmModeConnector *c = NULL;
-	for (i = 0; i < res->res->count_connectors; ++i) {
-		if (s->conId == res->connectors[i].connector->connector_id) {
-			c = res->connectors[i].connector;
-			break;
-		}
-	}
+	drmModeConnector *c;
+	c = drmModeGetConnector(drmfd, s->conId);
 	if (WARN_ON(!c, "drmModeGetConnector failed: %s\n", ERRSTR))
-		return ret;
+		goto fail_res;
 
 	if (WARN_ON(!c->count_modes, "connector supports no mode\n"))
-		return ret;
+		goto fail_conn;
 
 	if (!s->use_compose) {
-		drmModeCrtc *crtc = NULL;
-		for (i = 0; i < res->res->count_crtcs; ++i) {
-			if (s->crtcId == res->crtcs[i].crtc->crtc_id) {
-				crtc = res->crtcs[i].crtc;
-				break;
-			}
-		}
+		drmModeCrtc *crtc = drmModeGetCrtc(drmfd, s->crtcId);
 		s->compose.left = crtc->x;
 		s->compose.top = crtc->y;
 		s->compose.width = crtc->width;
@@ -380,323 +336,67 @@ static int find_crtc(struct resources *res, struct setup *s)
 		drmModeFreeCrtc(crtc);
 	}
 
-	return 0;
-}
+	if (con)
+		*con = c->connector_id;
+	ret = 0;
 
-static void free_resources(struct resources *res)
-{
-	int i;
+fail_conn:
+	drmModeFreeConnector(c);
 
-	if (!res)
-		return;
-
-#define free_resource(_res, __res, type, Type)					\
-	do {									\
-		if (!(_res)->type##s)						\
-			break;							\
-		for (i = 0; i < (int)(_res)->__res->count_##type##s; ++i) {	\
-			if (!(_res)->type##s[i].type)				\
-				break;						\
-			drmModeFree##Type((_res)->type##s[i].type);		\
-		}								\
-		free((_res)->type##s);						\
-	} while (0)
-
-#define free_properties(_res, __res, type)					\
-	do {									\
-		for (i = 0; i < (int)(_res)->__res->count_##type##s; ++i) {	\
-			drmModeFreeObjectProperties(res->type##s[i].props);	\
-			free(res->type##s[i].props_info);			\
-		}								\
-	} while (0)
-
-	if (res->res) {
-		free_properties(res, res, crtc);
-		free_properties(res, res, connector);
-
-		free_resource(res, res, crtc, Crtc);
-		free_resource(res, res, encoder, Encoder);
-		free_resource(res, res, connector, Connector);
-
-		drmModeFreeResources(res->res);
-	}
-
-	if (res->plane_res) {
-		free_properties(res, plane_res, plane);
-
-		free_resource(res, plane_res, plane, Plane);
-
-		drmModeFreePlaneResources(res->plane_res);
-	}
-}
-
-static int get_drm_resources(struct resources *res)
-{
-	int i;
-
-	res->res = drmModeGetResources(res->fd);
-	if (WARN_ON(!res->res, "drmModeGetResources failed: %s\n", ERRSTR))
-		return -1;
-
-	if (WARN_ON(res->res->count_crtcs <= 0, "drm: no crts\n"))
-		return -1;
-
-	res->crtcs = calloc(res->res->count_crtcs, sizeof(*res->crtcs));
-	if (WARN_ON(!res->crtcs, "calloc failed: %s\n", ERRSTR))
-		return -1;
-
-	res->connectors = calloc(res->res->count_connectors, sizeof(*res->connectors));
-	if (WARN_ON(!res->connectors, "calloc failed: %s\n", ERRSTR))
-		return -1;
-
-	res->encoders = calloc(res->res->count_encoders, sizeof(*res->encoders));
-	if (WARN_ON(!res->encoders, "calloc failed: %s\n", ERRSTR))
-		return -1;
-
-#define get_resource(_res, __res, type, Type)                                   \
-        do {                                                                    \
-                for (i = 0; i < (int)(_res)->__res->count_##type##s; ++i) {     \
-                        (_res)->type##s[i].type =                               \
-                                drmModeGet##Type((_res)->fd, (_res)->__res->type##s[i]); \
-                        if (!(_res)->type##s[i].type)                           \
-                                fprintf(stderr, "could not get %s %i: %s\n",    \
-                                        #type, (_res)->__res->type##s[i],       \
-                                        strerror(errno));                       \
-                }                                                               \
-        } while (0)
-
-	get_resource(res, res, crtc, Crtc);
-	get_resource(res, res, connector, Connector);
-	get_resource(res, res, encoder, Encoder);
-
-#define get_properties(_res, __res, type, Type)                                 \
-        do {                                                                    \
-                for (i = 0; i < (int)(_res)->__res->count_##type##s; ++i) {     \
-                        struct type *obj = &res->type##s[i];                    \
-                        unsigned int j;                                         \
-                        obj->props =                                            \
-                                drmModeObjectGetProperties(res->fd, obj->type->type##_id, \
-                                                           DRM_MODE_OBJECT_##Type); \
-                        if (!obj->props) {                                      \
-                                fprintf(stderr,                                 \
-                                        "could not get %s %i properties: %s\n", \
-                                        #type, obj->type->type##_id,            \
-                                        strerror(errno));                       \
-                                continue;                                       \
-                        }                                                       \
-                        obj->props_info = calloc(obj->props->count_props,       \
-                                                 sizeof(*obj->props_info));     \
-                        if (!obj->props_info)                                   \
-                                continue;                                       \
-                        for (j = 0; j < obj->props->count_props; ++j)           \
-                                obj->props_info[j] =                            \
-                                        drmModeGetProperty(res->fd, obj->props->props[j]); \
-                }                                                               \
-        } while (0)
-
-	get_properties(res, res, crtc, CRTC);
-	get_properties(res, res, connector, CONNECTOR);
-
-	res->plane_res = drmModeGetPlaneResources(res->fd);
-	if (WARN_ON(!res->plane_res, "drmModeGetPlaneResources failed: %s\n", ERRSTR))
-		return -1;
-
-	res->planes = calloc(res->plane_res->count_planes, sizeof(*res->planes));
-	if (WARN_ON(!res->planes, "calloc failed: %s\n", ERRSTR))
-		return -1;
-
-	get_resource(res, plane_res, plane, Plane);
-        get_properties(res, plane_res, plane, PLANE);
-
-	return 0;
-}
-
-static int add_plane_property(struct resources *res, drmModeAtomicReq *req,
-				uint32_t obj_id, const char *name, uint64_t value)
-{
-	struct plane *obj = NULL;
-	unsigned int i;
-	int prop_id = -1;
-
-	for (i = 0; i < (unsigned int) res->plane_res->count_planes ; i++) {
-		if (obj_id == res->plane_res->planes[i]) {
-			obj = &res->planes[i];
-			break;
-		}
-	}
-
-	if (!obj)
-		return -EINVAL;
-
-	for (i = 0 ; i < obj->props->count_props ; i++) {
-		if (strcmp(obj->props_info[i]->name, name) == 0) {
-			prop_id = obj->props_info[i]->prop_id;
-			break;
-		}
-	}
-
-	if (prop_id < 0)
-		return -EINVAL;
-
-	return drmModeAtomicAddProperty(req, obj_id, prop_id, value);
-}
-
-static int add_crtc_property(struct resources *res, drmModeAtomicReq *req,
-				uint32_t obj_id, const char *name, uint64_t value)
-{
-	struct crtc *obj = NULL;
-	unsigned int i;
-	int prop_id = -1;
-
-	for (i = 0; i < (unsigned int) res->res->count_crtcs ; i++) {
-		if (obj_id == res->res->crtcs[i]) {
-			obj = &res->crtcs[i];
-			break;
-		}
-	}
-
-	if (!obj)
-		return -EINVAL;
-
-	for (i = 0 ; i < obj->props->count_props ; i++) {
-		if (strcmp(obj->props_info[i]->name, name) == 0) {
-			prop_id = obj->props_info[i]->prop_id;
-			break;
-		}
-	}
-
-	if (prop_id < 0)
-		return -EINVAL;
-
-	return drmModeAtomicAddProperty(req, obj_id, prop_id, value);
-}
-
-int set_plane(struct resources *res, struct setup *s, struct buffer *buffer)
-{
-	drmModeAtomicReq *req;
-	uint64_t fence = 0;
-	int ret;
-
-	req = drmModeAtomicAlloc();
-
-	add_plane_property(res, req, s->planeId, "FB_ID", buffer->fb_handle);
-	add_plane_property(res, req, s->planeId, "CRTC_ID", s->crtcId);
-	add_plane_property(res, req, s->planeId, "SRC_X", 0);
-	add_plane_property(res, req, s->planeId, "SRC_Y", 0);
-	add_plane_property(res, req, s->planeId, "SRC_W", s->w << 16);
-	add_plane_property(res, req, s->planeId, "SRC_H", s->h << 16);
-	add_plane_property(res, req, s->planeId, "CRTC_X", s->compose.left);
-	add_plane_property(res, req, s->planeId, "CRTC_Y", s->compose.top);
-	add_plane_property(res, req, s->planeId, "CRTC_W", s->compose.width);
-	add_plane_property(res, req, s->planeId, "CRTC_H", s->compose.height);
-	add_plane_property(res, req, s->planeId, "IN_FENCE_FD", buffer->v4l2_out_fence);
-
-	ret = add_crtc_property(res, req, s->crtcId, "OUT_FENCE_PTR", (uint64_t)(void *)&fence);
-	BYE_ON(ret < 0, "add out fence failed: (%d)\n", ret);
-
-	ret = drmModeAtomicCommit(res->fd, req, DRM_MODE_PAGE_FLIP_EVENT, NULL);
-	BYE_ON(ret < 0, "atomic commit failed: (%d)\n", ret);
-
-	buffer->drm_out_fence = fence;
-	close(buffer->v4l2_out_fence);
-	buffer->v4l2_out_fence = -1;
-
-	drmModeAtomicFree(req);
+fail_res:
+	drmModeFreeResources(res);
 
 	return ret;
 }
 
-static int find_plane(struct resources *res, struct setup *s)
+static int find_plane(int drmfd, struct setup *s)
 {
+	drmModePlaneResPtr planes;
 	drmModePlanePtr plane;
 	unsigned int i;
 	unsigned int j;
+	int ret = 0;
 
-	for (i = 0; i < res->plane_res->count_planes; ++i) {
-		plane = res->planes[i].plane;
+	planes = drmModeGetPlaneResources(drmfd);
+	if (WARN_ON(!planes, "drmModeGetPlaneResources failed: %s\n", ERRSTR))
+		return -1;
+
+	for (i = 0; i < planes->count_planes; ++i) {
+		plane = drmModeGetPlane(drmfd, planes->planes[i]);
+		if (WARN_ON(!planes, "drmModeGetPlane failed: %s\n", ERRSTR))
+			break;
+
+		if (!(plane->possible_crtcs & (1 << s->crtcIdx))) {
+			drmModeFreePlane(plane);
+			continue;
+		}
+
 		for (j = 0; j < plane->count_formats; ++j) {
 			if (plane->formats[j] == s->out_fourcc)
 				break;
 		}
 
 		if (j == plane->count_formats) {
+			drmModeFreePlane(plane);
 			continue;
 		}
 
 		s->planeId = plane->plane_id;
+		drmModeFreePlane(plane);
 		break;
 	}
 
-	if (i == res->plane_res->count_planes)
-		return -1;
+	if (i == planes->count_planes)
+		ret = -1;
 
-	return 0;
-}
-
-int v4lfd;
-
-int next_drm_buffer(int cnt)
-{
-	return (stream.drm_next + 1) % cnt;
-}
-
-void v4l2_queue_buffer(struct buffer *buffer, int index) {
-	struct v4l2_buffer buf;
-	int ret;
-
-	if (buffer[index].queued_in_v4l2)
-		return;
-
-	if (buffer[index].drm_out_fence == -1)
-		return;
-
-	memset(&buf, 0, sizeof buf);
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory = V4L2_MEMORY_DMABUF;
-	buf.index = index;
-	buf.flags = V4L2_BUF_FLAG_OUT_FENCE;
-	if (buffer[index].drm_out_fence >= 0) {
-		buf.fence_fd = buffer[index].drm_out_fence;
-		buf.flags |= V4L2_BUF_FLAG_IN_FENCE;
-	}
-	buf.m.fd = buffer[index].dbuf_fd;
-
-	ret = ioctl(v4lfd, VIDIOC_QBUF, &buf);
-	BYE_ON(ret, "VIDIOC_QBUF(index = %d) failed: %s\n", index, ERRSTR);
-	buffer[index].v4l2_out_fence = buf.fence_fd;
-	close(buffer[index].drm_out_fence);
-	buffer[index].drm_out_fence = -1;
-}
-
-void *v4l2_thread(void *arg)
-{
-	struct buffer *buffer = arg;
-	struct v4l2_buffer buf;
-	struct pollfd fds[] = {
-		{ .fd = v4lfd, .events = POLLIN },
-	};
-	int ret;
-
-	while ((ret = poll(fds, 1, 5000)) > 0) {
-		memset(&buf, 0, sizeof buf);
-
-		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		buf.memory = V4L2_MEMORY_DMABUF;
-		ret = ioctl(v4lfd, VIDIOC_DQBUF, &buf);
-		BYE_ON(ret, "VIDIOC_DQBUF failed: %s\n", ERRSTR);
-
-		buffer[buf.index].queued_in_v4l2 = 0;
-
-		v4l2_queue_buffer(buffer, buf.index);
-
-	}
-	pthread_exit(NULL);
+	drmModeFreePlaneResources(planes);
+	return ret;
 }
 
 int main(int argc, char *argv[])
 {
-	struct setup s;
 	int ret;
+	struct setup s;
 
 	ret = parse_args(argc, argv, &s);
 	BYE_ON(ret, "failed to parse arguments\n");
@@ -706,13 +406,13 @@ int main(int argc, char *argv[])
 	int drmfd = drmOpen(s.module, NULL);
 	BYE_ON(drmfd < 0, "drmOpen(%s) failed: %s\n", s.module, ERRSTR);
 
-	v4lfd = open(s.video, O_RDWR);
+	int v4lfd = open(s.video, O_RDWR);
 	BYE_ON(v4lfd < 0, "failed to open %s: %s\n", s.video, ERRSTR);
 
 	struct v4l2_capability caps;
 	memset(&caps, 0, sizeof caps);
 
-	ret = ioctl(v4lfd, VIDIOC_QUERYCAP, &caps);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_QUERYCAP, &caps);
 	BYE_ON(ret, "VIDIOC_QUERYCAP failed: %s\n", ERRSTR);
 
 	/* TODO: add single plane support */
@@ -723,7 +423,7 @@ int main(int argc, char *argv[])
 	memset(&fmt, 0, sizeof fmt);
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-	ret = ioctl(v4lfd, VIDIOC_G_FMT, &fmt);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_G_FMT, &fmt);
 	BYE_ON(ret < 0, "VIDIOC_G_FMT failed: %s\n", ERRSTR);
 	printf("G_FMT(start): width = %u, height = %u, 4cc = %.4s\n",
 		fmt.fmt.pix.width, fmt.fmt.pix.height,
@@ -736,10 +436,10 @@ int main(int argc, char *argv[])
 	if (s.in_fourcc)
 		fmt.fmt.pix.pixelformat = s.in_fourcc;
 
-	ret = ioctl(v4lfd, VIDIOC_S_FMT, &fmt);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_S_FMT, &fmt);
 	BYE_ON(ret < 0, "VIDIOC_S_FMT failed: %s\n", ERRSTR);
 
-	ret = ioctl(v4lfd, VIDIOC_G_FMT, &fmt);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_G_FMT, &fmt);
 	BYE_ON(ret < 0, "VIDIOC_G_FMT failed: %s\n", ERRSTR);
 	printf("G_FMT(final): width = %u, height = %u, 4cc = %.4s\n",
 		fmt.fmt.pix.width, fmt.fmt.pix.height,
@@ -751,7 +451,7 @@ int main(int argc, char *argv[])
 	rqbufs.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	rqbufs.memory = V4L2_MEMORY_DMABUF;
 
-	ret = ioctl(v4lfd, VIDIOC_REQBUFS, &rqbufs);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_REQBUFS, &rqbufs);
 	BYE_ON(ret < 0, "VIDIOC_REQBUFS failed: %s\n", ERRSTR);
 	BYE_ON(rqbufs.count < s.buffer_count, "video node allocated only "
 		"%u of %u buffers\n", rqbufs.count, s.buffer_count);
@@ -768,23 +468,14 @@ int main(int argc, char *argv[])
 	for (unsigned int i = 0; i < s.buffer_count; ++i) {
 		ret = buffer_create(&buffer[i], drmfd, &s, size, pitch);
 		BYE_ON(ret, "failed to create buffer%d\n", i);
-		buffer[i].v4l2_out_fence = -1;
-		buffer[i].drm_out_fence = -1;
 	}
 	printf("buffers ready\n");
 
-	drmSetClientCap(drmfd, DRM_CLIENT_CAP_ATOMIC, 1);
-
-	struct resources resources;
-	resources.fd = drmfd;
-	ret = get_drm_resources(&resources);
-	BYE_ON(ret, "failed to get drm resources\n");
-
-	//XXX convert find_crtc to use resources
-	ret = find_crtc(&resources, &s);
+	uint32_t con;
+	ret = find_crtc(drmfd, &s, &con);
 	BYE_ON(ret, "failed to find valid mode\n");
 
-	ret = find_plane(&resources, &s);
+	ret = find_plane(drmfd, &s);
 	BYE_ON(ret, "failed to find compatible plane\n");
 
 	for (unsigned int i = 0; i < s.buffer_count; ++i) {
@@ -795,57 +486,57 @@ int main(int argc, char *argv[])
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buf.memory = V4L2_MEMORY_DMABUF;
 		buf.m.fd = buffer[i].dbuf_fd;
-		buf.flags |= V4L2_BUF_FLAG_OUT_FENCE;
-		ret = ioctl(v4lfd, VIDIOC_QBUF, &buf);
+		ret = v4l2_ioctl(v4lfd, VIDIOC_QBUF, &buf);
 		BYE_ON(ret < 0, "VIDIOC_QBUF for buffer %d failed: %s (fd %u)\n",
 			buf.index, ERRSTR, buffer[i].dbuf_fd);
-
-		buffer[i].v4l2_out_fence = buf.fence_fd;
-		buffer[i].queued_in_v4l2 = 1;
 	}
 
 	int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret = ioctl(v4lfd, VIDIOC_STREAMON, &type);
+	ret = v4l2_ioctl(v4lfd, VIDIOC_STREAMON, &type);
 	BYE_ON(ret < 0, "STREAMON failed: %s\n", ERRSTR);
 
-	unsigned int n = 0;
-	pthread_t v4l2_pthread;
-
-	pthread_create(&v4l2_pthread, NULL, v4l2_thread, buffer);
-
-	drmEventContext evctx;
-	memset(&evctx, 0, sizeof evctx);
-	evctx.version = DRM_EVENT_CONTEXT_VERSION;
-	evctx.vblank_handler = NULL;
-	evctx.page_flip_handler = NULL;
-
-	ret = set_plane(&resources, &s, &buffer[0]);
-	BYE_ON(ret, "failed to set plane: %s\n", ERRSTR);
-	stream.drm_next = 1;
-
-	n++;
-
 	struct pollfd fds[] = {
+		{ .fd = v4lfd, .events = POLLIN },
 		{ .fd = drmfd, .events = POLLIN },
 	};
 
-	while ((ret = poll(fds, 1, 5000)) > 0) {
-		drmHandleEvent(drmfd, &evctx);
+	/* buffer currently used by drm */
+	stream.v4lfd = v4lfd;
+	stream.current_buffer = -1;
+	stream.buffer = buffer;
 
-		// XXX make this NONBLOCKING
-		ret = set_plane(&resources, &s, &buffer[stream.drm_next]);
-		BYE_ON(ret, "failed to set plane: %s\n", ERRSTR);
+	while ((ret = poll(fds, 2, 5000)) > 0) {
+		struct v4l2_buffer buf;
 
-		if (++n == s.times)
-			break;
+		/* dequeue buffer */
+		memset(&buf, 0, sizeof buf);
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buf.memory = V4L2_MEMORY_DMABUF;
+		ret = v4l2_ioctl(v4lfd, VIDIOC_DQBUF, &buf);
+		BYE_ON(ret, "VIDIOC_DQBUF failed: %s\n", ERRSTR);
 
-		v4l2_queue_buffer(buffer, stream.drm_next);
+		ret = drmModeSetPlane(drmfd, s.planeId, s.crtcId,
+				      buffer[buf.index].fb_handle, 0,
+				      s.compose.left, s.compose.top,
+				      s.compose.width,
+				      s.compose.height,
+				      0, 0, s.w << 16, s.h << 16);
+		BYE_ON(ret, "drmModeSetPlane failed: %s\n", ERRSTR);
 
-		stream.drm_next = next_drm_buffer(s.buffer_count);
+		if (stream.current_buffer != -1) {
+			memset(&buf, 0, sizeof buf);
+			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			buf.memory = V4L2_MEMORY_DMABUF;
+			buf.index = stream.current_buffer;
+			buf.m.fd = stream.buffer[stream.current_buffer].dbuf_fd;
+
+			ret = v4l2_ioctl(stream.v4lfd, VIDIOC_QBUF, &buf);
+			BYE_ON(ret, "VIDIOC_QBUF(index = %d) failed: %s\n",
+			       stream.current_buffer, ERRSTR);
+		}
+
+		stream.current_buffer = buf.index;
 	}
 
-	//XXX clean up pthreads
-
-	free_resources(&resources);
 	return 0;
 }
