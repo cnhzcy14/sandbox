@@ -81,11 +81,13 @@ int main(int argc, char **argv)
 
 	drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	plane_res = drmModeGetPlaneResources(fd);
-	plane_id = plane_res->planes[0];
+	plane_id = plane_res->planes[1];
 
 	conn = drmModeGetConnector(fd, conn_id);
-	buf.width = conn->modes[0].hdisplay;
-	buf.height = conn->modes[0].vdisplay;
+	// buf.width = conn->modes[0].hdisplay;
+	// buf.height = conn->modes[0].vdisplay;
+	buf.width = 640;
+	buf.height = 480;
 
 	modeset_create_fb(fd, &buf);
 
@@ -96,8 +98,8 @@ int main(int argc, char **argv)
 
 	/* crop the rect from framebuffer(100, 150) to crtc(50, 50) */
 	drmModeSetPlane(fd, plane_id, crtc_id, buf.fb_id, 0,
-			50, 50, 320, 320,
-			100 << 16, 150 << 16, 320 << 16, 320 << 16);
+			50, 50, 640, 480,
+			0, 0, 640 << 16, 480 << 16);
 
 	getchar();
 
