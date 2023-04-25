@@ -9,7 +9,7 @@ export NVX_PROF=nvtx
 
 ```
 v4l2-ctl -d /dev/video0 --list-ctrls
-v4l2-ctl -d /dev/video0 --list-formats
+v4l2-ctl -d /dev/video0 --list-formats-ext
 v4l2-ctl -d /dev/video0 --stream-mmap=3 --stream-skip=3 --stream-count=1 --stream-poll --stream-to=cif.out
 
 ./dmabuf-sharing -M i915 -i /dev/video2 -S 640,480 -f UYVY -F UYVY -b 2 -s 640,480@0,0 -t 640,480@0,0
