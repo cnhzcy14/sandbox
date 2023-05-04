@@ -22,5 +22,3 @@ dep_gbm = dependency('gbm')
 # drm
 subdir('drm/gbm')
 subdir('drm/drmtoy')
-
-dep_common = [dep_egl, dep_gles2, dep_x11, dep_dl]
