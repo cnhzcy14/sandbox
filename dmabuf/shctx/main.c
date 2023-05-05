@@ -28,7 +28,7 @@
 #include <EGL/eglext.h>
 
 #include <X11/Xlib.h>
-
+#include <X11/Xutil.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
