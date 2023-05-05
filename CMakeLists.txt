@@ -183,6 +183,7 @@ add_subdirectory 		(c/test)
 # dma-buf
 add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
 add_subdirectory 		(dmabuf/drm-v4l2-test)
+add_subdirectory 		(dmabuf/shctx)
 
 # drm
 add_subdirectory 		(drm/drmtoy)

@@ -175,6 +175,10 @@ int main(int argc, char **argv)
         assert(image != EGL_NO_IMAGE);
         close(texture_dmabuf_fd);
 
+        PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES =
+            (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+        assert(glEGLImageTargetTexture2DOES);
+
         // GLES (extension: GL_OES_EGL_image_external): Create GL texture from EGL image
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);

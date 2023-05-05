@@ -25,3 +25,4 @@ subdir('drm/drmtoy')
 
 # dmabuf
 subdir('dmabuf/shctx')
+subdir('dmabuf/dma-buf-texture-sharing')
