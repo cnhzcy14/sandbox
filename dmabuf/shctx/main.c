@@ -220,7 +220,10 @@ init()
 static bool
 egl_init()
 {
-    if ((ctxA.dpy = eglGetPlatformDisplay(EGL_PLATFORM_X11_EXT, (void *)xdpy, NULL)) == EGL_NO_DISPLAY) {
+    PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT = 
+        (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+
+    if ((ctxA.dpy = eglGetPlatformDisplayEXT(EGL_PLATFORM_X11_EXT, (void *)xdpy, NULL)) == EGL_NO_DISPLAY) {
         fprintf(stderr, "Failed to get EGL display.\n");
         return false;
     }
@@ -230,7 +233,7 @@ egl_init()
         return false;
     }
 
-    if ((ctxB.dpy = eglGetPlatformDisplay(EGL_PLATFORM_X11_EXT, (void *)xdpy, NULL)) == EGL_NO_DISPLAY) {
+    if ((ctxB.dpy = eglGetPlatformDisplayEXT(EGL_PLATFORM_X11_EXT, (void *)xdpy, NULL)) == EGL_NO_DISPLAY) {
         fprintf(stderr, "Failed to get ANGLE EGL display : error : %s.\n", eglGetError() != EGL_SUCCESS ? "yes" : "no");
         return false;
     }
@@ -240,6 +243,8 @@ egl_init()
         return false;
     }
 
+    printf("  version: \"%s\"\n", eglQueryString(ctxA.dpy, EGL_VERSION));
+    printf("  version: \"%s\"\n", eglQueryString(ctxB.dpy, EGL_VENDOR));
     return (eglGetError() == EGL_SUCCESS);
 }
 
