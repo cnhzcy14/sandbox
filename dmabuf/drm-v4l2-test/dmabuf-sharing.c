@@ -475,6 +475,7 @@ int main(int argc, char *argv[])
 	ret = find_crtc(drmfd, &s, &con);
 	BYE_ON(ret, "failed to find valid mode\n");
 
+	// s.planeId = 0x44;
 	ret = find_plane(drmfd, &s);
 	BYE_ON(ret, "failed to find compatible plane\n");
 
