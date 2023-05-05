@@ -22,6 +22,7 @@ dep_gbm = dependency('gbm')
 # drm
 subdir('drm/gbm')
 subdir('drm/drmtoy')
+subdir('drm/drm-howto')
 
 # dmabuf
 subdir('dmabuf/shctx')
