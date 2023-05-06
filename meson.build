@@ -27,3 +27,4 @@ subdir('drm/drm-howto')
 # dmabuf
 subdir('dmabuf/shctx')
 subdir('dmabuf/dma-buf-texture-sharing')
+subdir('dmabuf/egl-dmabuf-camera')
