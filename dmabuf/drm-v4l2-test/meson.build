@@ -1,4 +1,4 @@
-dep_common = [dep_v4l2, dep_x11]
+dep_common = [dep_v4l2, dep_drm]
 
 executable(
     'dmabuf-sharing',
