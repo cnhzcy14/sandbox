@@ -48,11 +48,25 @@ void main(void) {                                                       \
 }                                                                       \
 "
 
+check_extensions(void)
+{
+   const char *client_extensions = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
+
+   if (!client_extensions) {
+      // No client extensions string available
+      abort();
+   }
+   if (!strstr(client_extensions, "EGL_KHR_platform_gbm")) {
+      abort();
+   }
+   printf("========= %s\n", client_extensions);
+}
+
 int32_t
 main (int32_t argc, char* argv[])
 {
    bool res;
-
+   check_extensions();
    int32_t fd = open ("/dev/dri/renderD128", O_RDWR);
    assert (fd > 0);
 
@@ -60,7 +74,7 @@ main (int32_t argc, char* argv[])
    assert (gbm != NULL);
 
    /* setup EGL from the GBM device */
-   EGLDisplay egl_dpy = eglGetPlatformDisplay (EGL_PLATFORM_GBM_MESA, gbm, NULL);
+   EGLDisplay egl_dpy = eglGetPlatformDisplay (EGL_PLATFORM_GBM_KHR, gbm, NULL);
    assert (egl_dpy != NULL);
 
    res = eglInitialize (egl_dpy, NULL, NULL);
