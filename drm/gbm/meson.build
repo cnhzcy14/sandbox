@@ -8,12 +8,3 @@ executable(
     dependencies: dep_common,
     install: true,
 )
-
-executable(
-    'egl-gbm-test',
-    files(
-      'egl-gbm-test.c',
-    ),
-    dependencies: dep_common,
-    install: true,
-)
