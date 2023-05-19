@@ -17,7 +17,7 @@ dep_dl = cc.find_library('dl', required : false)
 dep_drm = dependency('libdrm')
 dep_v4l2 = dependency('libv4l2')
 dep_gbm = dependency('gbm')
-
+dep_mali = dependency('mali')
 
 # drm
 subdir('drm/gbm')
@@ -29,3 +29,6 @@ subdir('dmabuf/shctx')
 subdir('dmabuf/dma-buf-texture-sharing')
 subdir('dmabuf/egl-dmabuf-camera')
 subdir('dmabuf/drm-v4l2-test')
+
+# opencl
+subdir('opencl/test')

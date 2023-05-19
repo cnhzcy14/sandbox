@@ -1,0 +1,14 @@
+###########plsase use UltraEdit open and read !!!!!!!!!##########################
+
+1. 把OpenCL_Gaussian_Blur 目录拷贝到 frameworks/native/opengl/tests/，这个目录
+2. mm 
+3. 在当前目录下生成 test_cl
+4. adb push test_cl /system/bin
+5. adb push kernel.cl /system/bin
+6. adb push image3.BMP /system/bin 
+7. 在目标板子上的shell 
+   1) chmod 777 /system/bin/test_cl
+   2) test_cl -i  /system/bin/image3.BMP
+   3) 在当前目录会生成 gpu_blur.bmp
+   4) 这个gpu_blur.bmp图片与原图比较，用openCL 做的模糊效果（gpu_blur.bmp）。
+   5) test_cl -i  /system/bin/image3.BMP -g 21 -s 1.8   // 指定参数，做得更模糊
