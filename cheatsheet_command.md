@@ -105,13 +105,6 @@ OMP_PLACES={4},{5} OMP_NUM_THREADS=3 OMP_PROC_BIND=true  ./larvio /home/rock/wor
 OMP_PLACES={4},{5} OMP_NUM_THREADS=3 OMP_PROC_BIND=true
 ```
 
-## cpu frequency
-
-```
-cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
-echo performance > /sys/devices/system/cpu/cpufreq/policy3/scaling_governor
-```
-
 ## ldd
 
 ```
@@ -149,8 +142,11 @@ sudo adb kill-server
 sudo adb shell
 ```
 
-## 
+## cpu frequency
+ 
 ```
+cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+
 echo performance > /sys/devices/system/cpu/cpufreq/policy4/scaling_governor
 echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 
