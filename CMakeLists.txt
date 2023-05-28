@@ -109,6 +109,7 @@ add_subdirectory 		(opencl/test)
 add_subdirectory 		(opencl/matmul)
 # add_subdirectory 		(opencl/marching_squares)
 # add_subdirectory 		(opencl/local_thresh)
+add_subdirectory 		(opencl/OpenCL-Textbook-Code)
 
 # openvx
 # add_subdirectory 		(openvx/test)
