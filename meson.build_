@@ -32,3 +32,8 @@ subdir('dmabuf/drm-v4l2-test')
 
 # opencl
 subdir('opencl/test')
+subdir('opencl/matmul')
+subdir('opencl/OpenCL-Textbook-Code')
+
+# opencv
+subdir('opencv/test')

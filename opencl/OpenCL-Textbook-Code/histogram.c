@@ -23,7 +23,10 @@ int main(int argc, char **argv)
      * data from disk */
     int imageRows;
     int imageCols;
-    hInputImage = readBmp("/home/cnhzcy14/work/data/cat.bmp", &imageRows, &imageCols);
+
+    char path[500];
+    strcpy(path, getenv("HOME"));
+    hInputImage = readBmp(strcat(path, "/work/data/cat.bmp"), &imageRows, &imageCols);
     const int imageElements = imageRows * imageCols;
     const size_t imageSize = imageElements * sizeof(uchar);
 
@@ -82,7 +85,8 @@ int main(int argc, char **argv)
     check(status);
 
     /* Create a program with source code */
-    char *programSource = readFile("/home/cnhzcy14/work/project/sandbox/opencl/OpenCL-Textbook-Code/histogram.cl");
+    strcpy(path, getenv("HOME"));
+    char *programSource = readFile(strcat(path, "/work/project/sandbox/opencl/OpenCL-Textbook-Code/histogram.cl"));
     size_t programSourceLen = strlen(programSource);
     cl_program program = clCreateProgramWithSource(context, 1,
                                                    (const char **)&programSource, &programSourceLen, &status);
@@ -109,14 +113,14 @@ int main(int argc, char **argv)
 
     /* Define the index space and work-group size */
     size_t globalWorkSize[1];
-    globalWorkSize[0] = 1024;
+    globalWorkSize[0] = 4096;
 
     size_t localWorkSize[1];
     localWorkSize[0] = 64;
 
     /* Enqueue the kernel for execution */
     status = clEnqueueNDRangeKernel(cmdQueue, kernel, 1, NULL,
-                                    globalWorkSize, localWorkSize, 0, NULL, NULL);
+                                    globalWorkSize, 0, 0, NULL, NULL);
     check(status);
 
     /* Read the output histogram buffer to the host */
