@@ -115,6 +115,7 @@ check dependency
 
 ```
 git clone --single-branch --branch <branchname> <remote-repo>
+repo sync -l
 ```
 
 ## add external swap
