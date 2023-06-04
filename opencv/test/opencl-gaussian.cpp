@@ -1041,7 +1041,7 @@ int App::run()
         putText(img_to_show, "interop with OpenCL " + memtype, Point(5, 120), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
         putText(img_to_show, "Time : " + timeStr() + " msec", Point(5, 150), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
 
-        // imshow("opencl_interop", img_to_show);
+        imshow("opencl_interop", img_to_show);
 
         total_frame++;
         time_total += time_end - time_start;

@@ -412,6 +412,44 @@ namespace opencl
 
 } // namespace opencl
 
+void check(cl_int status)
+{
+
+    if (status != CL_SUCCESS)
+    {
+        printf("OpenCL error (%d)\n", status);
+        exit(-1);
+    }
+}
+
+void printCompilerError(cl_program program, cl_device_id device)
+{
+    cl_int status;
+
+    size_t logSize;
+    char *log;
+
+    /* Get the log size */
+    status = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
+                                   0, NULL, &logSize);
+    check(status);
+
+    /* Allocate space for the log */
+    log = (char *)malloc(logSize);
+    if (!log)
+    {
+        exit(-1);
+    }
+
+    /* Read the log */
+    status = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
+                                   logSize, log, NULL);
+    check(status);
+
+    /* Print the log */
+    printf("%s\n", log);
+}
+
 char *getKernelSource(char *filename)
 {
     FILE *file = fopen(filename, "r");
@@ -642,7 +680,10 @@ int App::initOpenCL()
         
         res = clBuildProgram(m_program, 1, &m_device_id, 0, 0, 0);
         if (CL_SUCCESS != res)
-            return -1;
+        {
+            printCompilerError(m_program, m_device_id);
+            exit(-1);
+        }
 
         
 
@@ -850,7 +891,7 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
     }
 
     // process left half of frame in OpenCL
-    size_t globalWorkSize[] = {(size_t)frame.cols , (size_t)frame.rows};
+    size_t globalWorkSize[] = {(size_t)frame.cols/4, (size_t)frame.rows};
     size_t localWorkSize[] = {16, 60};
     cl_event asyncEvent = 0;
 
