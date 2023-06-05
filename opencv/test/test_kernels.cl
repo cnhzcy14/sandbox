@@ -49,24 +49,19 @@ __kernel void bitwise_inv_img_8uC1(__read_only image2d_t srcImg,
 //   write_imageui(srcImg, coord, val);
 // }
 
-__kernel void threshold(__global uchar4 *srcptr, int srcDstStep, int rows,
-                        int cols, uchar thresh, uchar max_val) {
+__kernel void threshold(__global uchar4 *srcptr, int srcDstStep, uchar thresh,
+                        uchar max_val) {
   int x = get_global_id(0);
   int y = get_global_id(1);
   int idx = mad24(y, srcDstStep, x);
-  uchar4 t = (uchar4)(55);
-  uchar4 h = (uchar4)(255);
+  uchar4 t = (uchar4)(thresh);
+  uchar4 h = (uchar4)(max_val);
   uchar4 l = (uchar4)(0);
-  // int4 c = isgreater(srcptr[idx], t);
-  // int4 c =  convert_int4(srcptr[idx] > t);
   char4 c = srcptr[idx] > t;
 
-
- 
   // srcptr[idx] = srcptr[idx] > thresh ? max_val : 0;
-  // srcptr[idx] = srcptr[idx];
+  // srcptr[idx] = ~srcptr[idx];
   srcptr[idx] = select(l, h, c);
-  // uchar4 v = select(l, h, c);
 }
 
 __kernel void maxloc(__global uchar *srcptr, int srcDstStep, int rows, int cols,
@@ -89,7 +84,8 @@ __kernel void maxloc(__global uchar *srcptr, int srcDstStep, int rows, int cols,
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (32,30, 1))) gaussian(__read_only image2d_t srcImg,
+// __kernel void __attribute__((reqd_work_group_size(32, 30, 1)))
+__kernel void gaussian(__read_only image2d_t srcImg,
                        __write_only image2d_t dstImg, __constant float *filter,
                        int filterWidth, int filterHeight, sampler_t sampler) {
   int column = get_global_id(0);

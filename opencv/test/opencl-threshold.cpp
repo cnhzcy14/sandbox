@@ -665,7 +665,9 @@ int App::initOpenCL()
         if (CL_SUCCESS != res)
             return -1;
 
-        m_queue = clCreateCommandQueue(m_context, m_device_id, CL_QUEUE_PROFILING_ENABLE, &res);
+        const cl_queue_properties q_prop[] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
+        m_queue = clCreateCommandQueueWithProperties(m_context, m_device_id, q_prop, &res);
+        // m_queue = clCreateCommandQueue(m_context, m_device_id, CL_QUEUE_PROFILING_ENABLE, &res);
         if (0 == m_queue || CL_SUCCESS != res)
             return -1;
 
@@ -764,32 +766,6 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
         // in real application more efficient pipeline can be built.
 
         if (use_buffer)
-        // {
-        //     cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
-
-        //     mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
-        //     if (0 == mem || CL_SUCCESS != res)
-        //         return -1;
-
-        //     res = clSetKernelArg(m_kernelBuf, 0, sizeof(cl_mem), &mem);
-        //     if (CL_SUCCESS != res)
-        //         return -1;
-            
-        //     res = clSetKernelArg(m_kernelBuf, 1, sizeof(int), &frame.step[0]);
-        //     if (CL_SUCCESS != res)
-        //         return -1;
-
-        //     res = clSetKernelArg(m_kernelBuf, 2, sizeof(int), &frame.rows);
-        //     if (CL_SUCCESS != res)
-        //         return -1;
-
-        //     int cols2 = frame.cols / 2;
-        //     res = clSetKernelArg(m_kernelBuf, 3, sizeof(int), &cols2);
-        //     if (CL_SUCCESS != res)
-        //         return -1;
-
-        //     kernel = m_kernelBuf;
-        // }
         {
             cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
 
@@ -801,26 +777,18 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (CL_SUCCESS != res)
                 return -1;
 
-            res = clSetKernelArg(m_kernelBufThreshold, 1, sizeof(int), &frame.step[0]);
-            if (CL_SUCCESS != res)
-                return -1;
-
-            res = clSetKernelArg(m_kernelBufThreshold, 2, sizeof(int), &frame.rows);
-            if (CL_SUCCESS != res)
-                return -1;
-
-            int cols2 = frame.cols ;
-            res = clSetKernelArg(m_kernelBufThreshold, 3, sizeof(int), &cols2);
+            int srcStep = frame.step[0] / 4;
+            res = clSetKernelArg(m_kernelBufThreshold, 1, sizeof(int), &srcStep);
             if (CL_SUCCESS != res)
                 return -1;
 
             uchar thresh = 55;
-            res = clSetKernelArg(m_kernelBufThreshold, 4, sizeof(uchar), &thresh);
+            res = clSetKernelArg(m_kernelBufThreshold, 2, sizeof(uchar), &thresh);
             if (CL_SUCCESS != res)
                 return -1;
 
             uchar max_val = 255;
-            res = clSetKernelArg(m_kernelBufThreshold, 5, sizeof(uchar), &max_val);
+            res = clSetKernelArg(m_kernelBufThreshold, 3, sizeof(uchar), &max_val);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -892,13 +860,13 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
 
     // process left half of frame in OpenCL
     size_t globalWorkSize[] = {(size_t)frame.cols/4, (size_t)frame.rows};
-    size_t localWorkSize[] = {16, 60};
-    cl_event asyncEvent = 0;
+    size_t localWorkSize[] = {32, 30};
+    cl_event timeEvent = 0;
 
     if (use_buffer)
     {
         res |= clEnqueueWriteBuffer(m_queue, mem, CL_TRUE, 0, frame.total(), frame.ptr(), 0, NULL, NULL);
-        res |= clEnqueueNDRangeKernel(m_queue, m_kernelBufThreshold, 2, 0, globalWorkSize, localWorkSize, 0, 0, &asyncEvent);
+        res |= clEnqueueNDRangeKernel(m_queue, m_kernelBufThreshold, 2, 0, globalWorkSize, localWorkSize, 0, 0, &timeEvent);
         if (CL_SUCCESS != res)
             return -1;
     }
@@ -907,25 +875,19 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
         size_t origin[] = {0, 0, 0};
         size_t region[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
         res |= clEnqueueWriteImage(m_queue, mem, CL_TRUE, origin, region, 0, 0, frame.ptr(), 0, NULL, NULL);
-        res |= clEnqueueNDRangeKernel(m_queue, m_kernelImg, 2, 0, globalWorkSize, 0, 0, 0, &asyncEvent);
+        res |= clEnqueueNDRangeKernel(m_queue, m_kernelImg, 2, 0, globalWorkSize, 0, 0, 0, &timeEvent);
         if (CL_SUCCESS != res)
             return -1;
     }
 
-    res = clWaitForEvents(1, &asyncEvent);
-
-    clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-    clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-
-
-    clReleaseEvent(asyncEvent);
+    res = clWaitForEvents(1, &timeEvent);
     if (CL_SUCCESS != res)
         return -1;
+    clGetEventProfilingInfo(timeEvent, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+    clGetEventProfilingInfo(timeEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+    clReleaseEvent(timeEvent);
     
-
-
     mem_obj[0] = mem;
-
     return 0;
 }
 
@@ -996,11 +958,9 @@ int App::run()
 
         // work
         timerStart();
-
         if (doProcess())
         {
             process_frame_with_open_cl(m_frameGray, useBuffer(), &m_mem_obj);
-
             if (useBuffer())
                 process_cl_buffer_with_opencv(
                     m_mem_obj, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
@@ -1011,7 +971,6 @@ int App::run()
         {
             m_frameGray.copyTo(uframe);
         }
-
         timerEnd();
 
         uframe.copyTo(img_to_show);
@@ -1029,7 +988,7 @@ int App::run()
         time_total += time_end - time_start;
         if((total_frame % 100) == 0)
         {
-            cout << total_frame << "========: " << time_total/total_frame << endl;
+            cout << total_frame << " frames " << time_total/total_frame << " ns\n";
         }
         
 

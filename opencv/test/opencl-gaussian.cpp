@@ -884,7 +884,7 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_mem), &m_filter);
             if (CL_SUCCESS != res)
                 return -1;
-
+            cout << filter.rows  << " ====\n";
             res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_int), &filter.rows);
             if (CL_SUCCESS != res)
                 return -1;
@@ -1047,7 +1047,7 @@ int App::run()
         time_total += time_end - time_start;
         if ((total_frame % 100) == 0)
         {
-            cout << total_frame << "========: " << time_total / total_frame << endl;
+            cout << total_frame << " frames " << time_total/total_frame << " ns\n";
         }
 
         handleKey((char)waitKey(3));
