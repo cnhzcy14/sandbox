@@ -482,7 +482,7 @@ public:
     int initOpenCL();
     int initVideoSource();
 
-    int process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *cl_buffer);
+    int process_frame_with_open_cl(cv::Mat &frame, bool use_buffer);
     int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat &u);
     int process_cl_image_with_opencv(cl_mem image, cv::UMat &u);
 
@@ -532,6 +532,13 @@ private:
     cl_kernel m_kernelBufThreshold;
     cl_mem m_img_src; // used as src in case processing of cl image
     cl_mem m_mem_obj;
+    cl_mem m_mem_obj_dst;
+
+    cl_sampler m_sampler;
+
+    cl_mem m_filter;
+    cl_mem m_filterHalfSize;
+    cv::Mat filter;
 
     cl_event timing_event;
     cl_ulong time_start, time_end, time_total;
@@ -568,6 +575,13 @@ App::App(CommandLineParser &cmd)
     m_kernelBufThreshold = 0;
     m_img_src = 0;
     m_mem_obj = 0;
+    m_mem_obj_dst = 0;
+    m_filter = 0;
+    m_filterHalfSize = 0;
+    m_sampler = 0;
+
+    filter = cv::getGaussianKernel(5, 1, CV_32F);
+    cout << filter << "=========\n";
 
     time_total = 0;
     total_frame = 0;
@@ -598,6 +612,30 @@ App::~App()
     {
         clReleaseMemObject(m_mem_obj);
         m_mem_obj = 0;
+    }
+
+    if (m_mem_obj_dst)
+    {
+        clReleaseMemObject(m_mem_obj_dst);
+        m_mem_obj_dst = 0;
+    }
+
+    if (m_sampler)
+    {
+        clReleaseSampler(m_sampler);
+        m_sampler = 0;
+    }
+
+    if (m_filter)
+    {
+        clReleaseMemObject(m_filter);
+        m_filter = 0;
+    }
+
+    if (m_filterHalfSize)
+    {
+        clReleaseMemObject(m_filterHalfSize);
+        m_filterHalfSize = 0;
     }
 
     if (m_kernelBuf)
@@ -665,9 +703,7 @@ int App::initOpenCL()
         if (CL_SUCCESS != res)
             return -1;
 
-        const cl_queue_properties q_prop[] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
-        m_queue = clCreateCommandQueueWithProperties(m_context, m_device_id, q_prop, &res);
-        // m_queue = clCreateCommandQueue(m_context, m_device_id, CL_QUEUE_PROFILING_ENABLE, &res);
+        m_queue = clCreateCommandQueue(m_context, m_device_id, CL_QUEUE_PROFILING_ENABLE, &res);
         if (0 == m_queue || CL_SUCCESS != res)
             return -1;
 
@@ -686,11 +722,11 @@ int App::initOpenCL()
             exit(-1);
         }
 
-        m_kernelBuf = clCreateKernel(m_program, "bitwise_inv_buf_8uC1", &res);
+        m_kernelBuf = clCreateKernel(m_program, "gaussian51buf", &res);
         if (0 == m_kernelBuf || CL_SUCCESS != res)
             return -1;
 
-        m_kernelImg = clCreateKernel(m_program, "bitwise_inv_img_8uC1", &res);
+        m_kernelImg = clCreateKernel(m_program, "gaussian51", &res);
         if (0 == m_kernelImg || CL_SUCCESS != res)
             return -1;
 
@@ -723,7 +759,7 @@ int App::initVideoSource()
         else if (m_camera_id != -1)
         {
 
-            m_cap.open("multifilesrc location=/home/radxa/work/data/1920x360.bin loop=1  ! videoparse width=1920 height=360 format=gray8 framerate=30/1 ! videoconvert ! appsink", cv::CAP_GSTREAMER);
+            m_cap.open("multifilesrc location=/home/radxa/work/data/20210425_182753_296.y loop=1  ! videoparse width=1920 height=360 format=gray8 framerate=60/1 ! videoconvert ! appsink", cv::CAP_GSTREAMER);
             if (!m_cap.isOpened())
             {
                 std::stringstream msg;
@@ -748,16 +784,16 @@ int App::initVideoSource()
 // It creates OpenCL buffer or image, depending on use_buffer flag,
 // from input media frame and process these data
 // (inverts each pixel value in half of frame) with OpenCL kernel
-int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem_obj)
+int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer)
 {
     cl_int res = CL_SUCCESS;
 
-    CV_Assert(mem_obj);
+    // CV_Assert(mem_obj);
 
     cl_kernel kernel = 0;
-    cl_mem mem = mem_obj[0];
+    // cl_mem mem = 0;
 
-    if (0 == mem)
+    if (0 == m_mem_obj)
     {
         // allocate/delete cl memory objects every frame for the simplicity.
         // in real application more efficient pipeline can be built.
@@ -766,50 +802,57 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
         {
             cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
 
-            mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
-            if (0 == mem || CL_SUCCESS != res)
+            m_mem_obj = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
+            if (0 == m_mem_obj || CL_SUCCESS != res)
                 return -1;
 
-            res = clSetKernelArg(m_kernelBufThreshold, 0, sizeof(cl_mem), &mem);
+            m_mem_obj_dst = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.total(), NULL, &res);
+            if (0 == m_mem_obj_dst || CL_SUCCESS != res)
+                return -1;
+
+            res = clSetKernelArg(m_kernelBuf, 0, sizeof(cl_mem), &m_mem_obj);
             if (CL_SUCCESS != res)
                 return -1;
 
-            int srcStep = frame.step[0] / 4;
-            res = clSetKernelArg(m_kernelBufThreshold, 1, sizeof(int), &srcStep);
+            res = clSetKernelArg(m_kernelBuf, 1, sizeof(cl_mem), &m_mem_obj_dst);
             if (CL_SUCCESS != res)
                 return -1;
 
-            uchar thresh = 55;
-            res = clSetKernelArg(m_kernelBufThreshold, 2, sizeof(uchar), &thresh);
+            int step = frame.step[0]/4;
+            res = clSetKernelArg(m_kernelBuf, 2, sizeof(int), &step);
             if (CL_SUCCESS != res)
                 return -1;
 
-            uchar max_val = 255;
-            res = clSetKernelArg(m_kernelBufThreshold, 3, sizeof(uchar), &max_val);
+            res = clSetKernelArg(m_kernelBuf, 3, sizeof(int), &frame.rows);
             if (CL_SUCCESS != res)
                 return -1;
 
-            kernel = m_kernelBufThreshold;
+            int cols2 = frame.cols;
+            res = clSetKernelArg(m_kernelBuf, 4, sizeof(int), &cols2);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            kernel = m_kernelBuf;
         }
         else
         {
             cl_mem_flags flags_src = CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR;
 
             cl_image_format fmt;
-            fmt.image_channel_order     = CL_R;
-            fmt.image_channel_data_type = CL_UNSIGNED_INT8;
+            fmt.image_channel_order = CL_R;
+            fmt.image_channel_data_type = CL_UNORM_INT8;
 
             cl_image_desc desc_src;
-            desc_src.image_type        = CL_MEM_OBJECT_IMAGE2D;
-            desc_src.image_width       = frame.cols;
-            desc_src.image_height      = frame.rows;
-            desc_src.image_depth       = 0;
-            desc_src.image_array_size  = 0;
-            desc_src.image_row_pitch   = frame.step[0];
+            desc_src.image_type = CL_MEM_OBJECT_IMAGE2D;
+            desc_src.image_width = frame.cols;
+            desc_src.image_height = frame.rows;
+            desc_src.image_depth = 0;
+            desc_src.image_array_size = 0;
+            desc_src.image_row_pitch = frame.step[0];
             desc_src.image_slice_pitch = 0;
-            desc_src.num_mip_levels    = 0;
-            desc_src.num_samples       = 0;
-            desc_src.buffer            = 0;
+            desc_src.num_mip_levels = 0;
+            desc_src.num_samples = 0;
+            desc_src.buffer = 0;
             m_img_src = clCreateImage(m_context, flags_src, &fmt, &desc_src, frame.ptr(), &res);
             if (0 == m_img_src || CL_SUCCESS != res)
                 return -1;
@@ -817,24 +860,24 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             cl_mem_flags flags_dst = CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR;
 
             cl_image_desc desc_dst;
-            desc_dst.image_type        = CL_MEM_OBJECT_IMAGE2D;
-            desc_dst.image_width       = frame.cols;
-            desc_dst.image_height      = frame.rows;
-            desc_dst.image_depth       = 0;
-            desc_dst.image_array_size  = 0;
-            desc_dst.image_row_pitch   = 0;
+            desc_dst.image_type = CL_MEM_OBJECT_IMAGE2D;
+            desc_dst.image_width = frame.cols;
+            desc_dst.image_height = frame.rows;
+            desc_dst.image_depth = 0;
+            desc_dst.image_array_size = 0;
+            desc_dst.image_row_pitch = 0;
             desc_dst.image_slice_pitch = 0;
-            desc_dst.num_mip_levels    = 0;
-            desc_dst.num_samples       = 0;
-            desc_dst.buffer            = 0;
-            mem = clCreateImage(m_context, flags_dst, &fmt, &desc_dst, 0, &res);
-            if (0 == mem || CL_SUCCESS != res)
+            desc_dst.num_mip_levels = 0;
+            desc_dst.num_samples = 0;
+            desc_dst.buffer = 0;
+            m_mem_obj = clCreateImage(m_context, flags_dst, &fmt, &desc_dst, 0, &res);
+            if (0 == m_mem_obj || CL_SUCCESS != res)
                 return -1;
 
-            size_t origin[] = { 0, 0, 0 };
-            size_t region[] = { (size_t)frame.cols, (size_t)frame.rows, 1 };
+            size_t origin[] = {0, 0, 0};
+            size_t region[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
             cl_event asyncEvent = 0;
-            res = clEnqueueCopyImage(m_queue, m_img_src, mem, origin, origin, region, 0, 0, &asyncEvent);
+            res = clEnqueueCopyImage(m_queue, m_img_src, m_mem_obj, origin, origin, region, 0, 0, &asyncEvent);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -843,11 +886,59 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (CL_SUCCESS != res)
                 return -1;
 
+            m_filter = clCreateBuffer(m_context, CL_MEM_READ_ONLY, filter.rows * filter.cols * sizeof(float), NULL, &res);
+            if (0 == m_filter || CL_SUCCESS != res)
+                return -1;
+
+            res = clEnqueueWriteBuffer(m_queue, m_filter, CL_TRUE, 0, filter.rows * filter.cols * sizeof(float), filter.data, 0, NULL, NULL);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            m_filterHalfSize = clCreateBuffer(m_context, CL_MEM_READ_ONLY, 2 * sizeof(int), NULL, &res);
+            if (0 == m_filterHalfSize || CL_SUCCESS != res)
+                return -1;
+
+            int filtHalfSize[2] = {filter.cols/2, filter.rows/2};
+            res = clEnqueueWriteBuffer(m_queue, m_filterHalfSize, CL_TRUE, 0, 2 * sizeof(int), filtHalfSize, 0, NULL, NULL);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            m_sampler = clCreateSampler(m_context,
+                                      CL_FALSE, // Non-normalized coordinates
+                                      CL_ADDRESS_CLAMP_TO_EDGE,
+                                      CL_FILTER_NEAREST,
+                                      &res);
+            if (0 == m_sampler || CL_SUCCESS != res)
+                return -1;
+
+
             res = clSetKernelArg(m_kernelImg, 0, sizeof(cl_mem), &m_img_src);
             if (CL_SUCCESS != res)
                 return -1;
 
-            res = clSetKernelArg(m_kernelImg, 1, sizeof(cl_mem), &mem);
+            res = clSetKernelArg(m_kernelImg, 1, sizeof(cl_mem), &m_mem_obj);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            // res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_mem), &m_filter);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            // res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_mem), &m_filterHalfSize);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            // int halfW = 0;
+            // res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_int), &halfW);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            // int halfH = 2;
+            // res = clSetKernelArg(m_kernelImg, 4, sizeof(cl_int), &halfH);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_sampler), &m_sampler);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -856,14 +947,14 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
     }
 
     // process left half of frame in OpenCL
-    size_t globalWorkSize[] = {(size_t)frame.cols/4, (size_t)frame.rows};
+    size_t globalWorkSize[] = {(size_t)frame.cols/4 , (size_t)frame.rows};
     size_t localWorkSize[] = {32, 30};
-    cl_event timeEvent = 0;
+    cl_event asyncEvent = 0;
 
     if (use_buffer)
     {
-        res |= clEnqueueWriteBuffer(m_queue, mem, CL_TRUE, 0, frame.total(), frame.ptr(), 0, NULL, NULL);
-        res |= clEnqueueNDRangeKernel(m_queue, m_kernelBufThreshold, 2, 0, globalWorkSize, localWorkSize, 0, 0, &timeEvent);
+        res |= clEnqueueWriteBuffer(m_queue, m_mem_obj, CL_TRUE, 0, frame.total(), frame.ptr(), 0, NULL, NULL);
+        res |= clEnqueueNDRangeKernel(m_queue, m_kernelBuf, 2, 0, globalWorkSize, localWorkSize, 0, 0, &asyncEvent);
         if (CL_SUCCESS != res)
             return -1;
     }
@@ -871,20 +962,22 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
     {
         size_t origin[] = {0, 0, 0};
         size_t region[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
-        res |= clEnqueueWriteImage(m_queue, mem, CL_TRUE, origin, region, 0, 0, frame.ptr(), 0, NULL, NULL);
-        res |= clEnqueueNDRangeKernel(m_queue, m_kernelImg, 2, 0, globalWorkSize, 0, 0, 0, &timeEvent);
+        res |= clEnqueueWriteImage(m_queue, m_img_src, CL_TRUE, origin, region, 0, 0, frame.ptr(), 0, NULL, NULL);
+        res |= clEnqueueNDRangeKernel(m_queue, m_kernelImg, 2, 0, globalWorkSize, localWorkSize, 0, 0, &asyncEvent);
         if (CL_SUCCESS != res)
             return -1;
     }
 
-    res = clWaitForEvents(1, &timeEvent);
+    res = clWaitForEvents(1, &asyncEvent);
+
+    clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+    clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+
+    clReleaseEvent(asyncEvent);
     if (CL_SUCCESS != res)
         return -1;
-    clGetEventProfilingInfo(timeEvent, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-    clGetEventProfilingInfo(timeEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-    clReleaseEvent(timeEvent);
-    
-    mem_obj[0] = mem;
+
+    // mem_obj[0] = mem;
     return 0;
 }
 
@@ -903,6 +996,8 @@ int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int
     // cv::blur(uroi, uroi, cv::Size(7, 7), cv::Point(-3, -3));
     // cv::threshold(uroi, uroi, 55, 255, cv::THRESH_BINARY);
 
+    // GaussianBlur(uroi, uroi, Size(5,1), 3, 0);
+
     return 0;
 }
 
@@ -920,6 +1015,15 @@ int App::process_cl_image_with_opencv(cl_mem image, cv::UMat &u)
     cv::UMat uroi(u, roi);
     // cv::blur(uroi, uroi, cv::Size(7, 7), cv::Point(-3, -3));
     // cv::threshold(uroi, uroi, 55, 255, cv::THRESH_BINARY);
+
+    // GaussianBlur(uroi, uroi, Size(5, 1), 7, 0);
+    // cv::Mat k = cv::getGaussianKernel(5, 1, CV_32F);
+    // cout << k << " ======= \n";
+    // float *kk = (float *)k.data;
+    // for(int i=0; i<5; i++)
+    // {
+    //     cout << ((float *)k.data)[i] << " ======= \n";
+    // }
 
     return 0;
 }
@@ -956,10 +1060,10 @@ int App::run()
         timerStart();
         if (doProcess())
         {
-            process_frame_with_open_cl(m_frameGray, useBuffer(), &m_mem_obj);
+            process_frame_with_open_cl(m_frameGray, useBuffer());
             if (useBuffer())
                 process_cl_buffer_with_opencv(
-                    m_mem_obj, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
+                    m_mem_obj_dst, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
             else
                 process_cl_image_with_opencv(m_mem_obj, uframe);
         }

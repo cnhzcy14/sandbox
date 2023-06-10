@@ -28,6 +28,15 @@ executable(
 )
 
 executable(
+    'opencl-gaussian-buf',
+    files(
+      'opencl-gaussian-buf.cpp'
+    ),
+    dependencies: dep_common,
+    install: true,
+)
+
+executable(
     'opencl-histogram',
     files(
       'opencl-histogram.cpp'
@@ -40,6 +49,15 @@ executable(
     'opencl-maxloc',
     files(
       'opencl-maxloc.cpp'
+    ),
+    dependencies: dep_common,
+    install: true,
+)
+
+executable(
+    'opencl-maxloc-vec',
+    files(
+      'opencl-maxloc-vec.cpp'
     ),
     dependencies: dep_common,
     install: true,

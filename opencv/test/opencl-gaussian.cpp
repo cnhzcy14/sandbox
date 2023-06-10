@@ -412,6 +412,44 @@ namespace opencl
 
 } // namespace opencl
 
+void check(cl_int status)
+{
+
+    if (status != CL_SUCCESS)
+    {
+        printf("OpenCL error (%d)\n", status);
+        exit(-1);
+    }
+}
+
+void printCompilerError(cl_program program, cl_device_id device)
+{
+    cl_int status;
+
+    size_t logSize;
+    char *log;
+
+    /* Get the log size */
+    status = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
+                                   0, NULL, &logSize);
+    check(status);
+
+    /* Allocate space for the log */
+    log = (char *)malloc(logSize);
+    if (!log)
+    {
+        exit(-1);
+    }
+
+    /* Read the log */
+    status = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
+                                   logSize, log, NULL);
+    check(status);
+
+    /* Print the log */
+    printf("%s\n", log);
+}
+
 char *getKernelSource(char *filename)
 {
     FILE *file = fopen(filename, "r");
@@ -498,6 +536,7 @@ private:
     cl_sampler m_sampler;
 
     cl_mem m_filter;
+    cl_mem m_filterHalfSize;
     cv::Mat filter;
 
     cl_event timing_event;
@@ -536,9 +575,11 @@ App::App(CommandLineParser &cmd)
     m_img_src = 0;
     m_mem_obj = 0;
     m_filter = 0;
+    m_filterHalfSize = 0;
     m_sampler = 0;
 
     filter = cv::getGaussianKernel(5, 1, CV_32F);
+    cout << filter << "=========\n";
 
     time_total = 0;
     total_frame = 0;
@@ -581,6 +622,12 @@ App::~App()
     {
         clReleaseMemObject(m_filter);
         m_filter = 0;
+    }
+
+    if (m_filterHalfSize)
+    {
+        clReleaseMemObject(m_filterHalfSize);
+        m_filterHalfSize = 0;
     }
 
     if (m_kernelBuf)
@@ -662,13 +709,16 @@ int App::initOpenCL()
 
         res = clBuildProgram(m_program, 1, &m_device_id, 0, 0, 0);
         if (CL_SUCCESS != res)
-            return -1;
+        {
+            printCompilerError(m_program, m_device_id);
+            exit(-1);
+        }
 
         m_kernelBuf = clCreateKernel(m_program, "bitwise_inv_buf_8uC1", &res);
         if (0 == m_kernelBuf || CL_SUCCESS != res)
             return -1;
 
-        m_kernelImg = clCreateKernel(m_program, "gaussian", &res);
+        m_kernelImg = clCreateKernel(m_program, "gaussian51", &res);
         if (0 == m_kernelImg || CL_SUCCESS != res)
             return -1;
 
@@ -859,8 +909,16 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (0 == m_filter || CL_SUCCESS != res)
                 return -1;
 
-            float f[5] = {0,0,0,0,0};
             res = clEnqueueWriteBuffer(m_queue, m_filter, CL_TRUE, 0, filter.rows * filter.cols * sizeof(float), filter.data, 0, NULL, NULL);
+            if (CL_SUCCESS != res)
+                return -1;
+
+            m_filterHalfSize = clCreateBuffer(m_context, CL_MEM_READ_ONLY, 2 * sizeof(int), NULL, &res);
+            if (0 == m_filterHalfSize || CL_SUCCESS != res)
+                return -1;
+
+            int filtHalfSize[2] = {filter.cols/2, filter.rows/2};
+            res = clEnqueueWriteBuffer(m_queue, m_filterHalfSize, CL_TRUE, 0, 2 * sizeof(int), filtHalfSize, 0, NULL, NULL);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -881,19 +939,25 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (CL_SUCCESS != res)
                 return -1;
 
-            res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_mem), &m_filter);
-            if (CL_SUCCESS != res)
-                return -1;
-            cout << filter.rows  << " ====\n";
-            res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_int), &filter.rows);
-            if (CL_SUCCESS != res)
-                return -1;
+            // res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_mem), &m_filter);
+            // if (CL_SUCCESS != res)
+            //     return -1;
 
-            res = clSetKernelArg(m_kernelImg, 4, sizeof(cl_int), &filter.cols);
-            if (CL_SUCCESS != res)
-                return -1;
+            // res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_mem), &m_filterHalfSize);
+            // if (CL_SUCCESS != res)
+            //     return -1;
 
-            res = clSetKernelArg(m_kernelImg, 5, sizeof(cl_sampler), &m_sampler);
+            // int halfW = 0;
+            // res = clSetKernelArg(m_kernelImg, 3, sizeof(cl_int), &halfW);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            // int halfH = 2;
+            // res = clSetKernelArg(m_kernelImg, 4, sizeof(cl_int), &halfH);
+            // if (CL_SUCCESS != res)
+            //     return -1;
+
+            res = clSetKernelArg(m_kernelImg, 2, sizeof(cl_sampler), &m_sampler);
             if (CL_SUCCESS != res)
                 return -1;
 

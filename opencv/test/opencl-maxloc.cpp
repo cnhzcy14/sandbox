@@ -527,7 +527,6 @@ private:
     cl_device_id m_device_id;
     cl_command_queue m_queue;
     cl_program m_program;
-    cl_kernel m_kernelBuf;
     cl_kernel m_kernelImg;
     cl_kernel m_kernelBufMaxLoc;
     cl_mem m_img_src; // used as src in case processing of cl image
@@ -566,7 +565,6 @@ App::App(CommandLineParser &cmd)
     m_device_id = 0;
     m_queue = 0;
     m_program = 0;
-    m_kernelBuf = 0;
     m_kernelImg = 0;
     m_kernelBufMaxLoc = 0;
     m_img_src = 0;
@@ -622,12 +620,6 @@ App::~App()
     {
         clReleaseMemObject(m_mem_maxloc);
         m_mem_maxloc = 0;
-    }
-
-    if (m_kernelBuf)
-    {
-        clReleaseKernel(m_kernelBuf);
-        m_kernelBuf = 0;
     }
 
     if (m_kernelImg)
@@ -707,11 +699,6 @@ int App::initOpenCL()
             printCompilerError(m_program, m_device_id);
             exit(-1);
         }
-
-
-        m_kernelBuf = clCreateKernel(m_program, "bitwise_inv_buf_8uC1", &res);
-        if (0 == m_kernelBuf || CL_SUCCESS != res)
-            return -1;
 
         m_kernelImg = clCreateKernel(m_program, "bitwise_inv_img_8uC1", &res);
         if (0 == m_kernelImg || CL_SUCCESS != res)
