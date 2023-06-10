@@ -23,12 +23,30 @@ __kernel void histogram(__global uchar *data, int numData,
   }
 }
 
-__kernel void bitwise_inv_buf_8uC1(__global uchar *pSrcDst, int srcDstStep,
+__kernel void bitwise_inv_buf_8uC1(__global uchar16 *pSrcDst, int srcDstStep,
                                    int rows, int cols) {
   int x = get_global_id(0);
   int y = get_global_id(1);
   int idx = mad24(y, srcDstStep, x);
-  pSrcDst[idx] = ~pSrcDst[idx];
+  // uchar4 a = ~pSrcDst[idx];
+  // pSrcDst[idx] = ~pSrcDst[idx];
+  // pSrcDst[idx] = (uchar16)(0, 20, 60, 100, 140, 180, 220, 255, 0, 20, 60, 100, 140, 180, 220, 255);
+  pSrcDst[idx].s0 = 100;
+  pSrcDst[idx].s1 = 140;
+  pSrcDst[idx].s2 = 180;
+  pSrcDst[idx].s3 = 220;
+  pSrcDst[idx].s4 = 100;
+  pSrcDst[idx].s5 = 140;
+  pSrcDst[idx].s6 = 180;
+  pSrcDst[idx].s7 = 220;
+  pSrcDst[idx].s8 = 100;
+  pSrcDst[idx].s9 = 140;
+  pSrcDst[idx].sA = 180;
+  pSrcDst[idx].sB = 220;
+  pSrcDst[idx].sC = 100;
+  pSrcDst[idx].sD = 140;
+  pSrcDst[idx].sE = 180;
+  pSrcDst[idx].sF = 220;
 }
 
 
@@ -118,7 +136,7 @@ __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows, int c
   //   int4 step = select(zero, one,  convert_int4(res));
   //   max_cnt += step;
   // }
-  maxCount[col] = max_cnt;
+  // maxCount[col] = max_cnt;
 
     // if (srcptr[idx] > maxVal[col]) {
     //   maxVal[col] = srcptr[idx];

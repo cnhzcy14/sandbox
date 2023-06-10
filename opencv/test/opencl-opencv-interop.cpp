@@ -760,7 +760,8 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (CL_SUCCESS != res)
                 return -1;
             
-            res = clSetKernelArg(m_kernelBuf, 1, sizeof(int), &frame.step[0]);
+            int step = frame.step[0] / 16;
+            res = clSetKernelArg(m_kernelBuf, 1, sizeof(int), &step);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -768,8 +769,7 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
             if (CL_SUCCESS != res)
                 return -1;
 
-            int cols2 = frame.cols / 2;
-            res = clSetKernelArg(m_kernelBuf, 3, sizeof(int), &cols2);
+            res = clSetKernelArg(m_kernelBuf, 3, sizeof(int), &frame.cols);
             if (CL_SUCCESS != res)
                 return -1;
 
@@ -840,8 +840,8 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
     }
 
     // process left half of frame in OpenCL
-    size_t globalWorkSize[] = {(size_t)frame.cols , (size_t)frame.rows};
-    size_t localWorkSize[] = {32, 30};
+    size_t globalWorkSize[] = {(size_t)frame.cols/16 , (size_t)frame.rows};
+    size_t localWorkSize[] = {30, 30};
     cl_event asyncEvent = 0;
 
     if (use_buffer)
