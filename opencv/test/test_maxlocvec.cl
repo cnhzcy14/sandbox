@@ -106,7 +106,7 @@ __kernel void maxloc(__global uchar *srcptr, int srcDstStep, int rows, int cols,
 
 __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows,
                         int cols, __global uchar4 *maxVal,
-                        __global uchar4 *maxCount, __global uchar4 *dstptr) {
+                        __global int4 *maxLoc, __global uchar4 *maxCount) {
   int col = get_global_id(0);
 
   uchar4 max_val = (uchar4)(1);
@@ -115,27 +115,49 @@ __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows,
   const uchar4 zero = (uchar4)(0);
   char4 res;
   int idx;
-  // uchar4 = dst;
 
   // find maximum for the kernel
   for (int row = 0; row < rows; row++) {
     idx = mad24(row, srcDstStep, col);
+
     res = srcptr[idx] > max_val;
     max_val = select(max_val, srcptr[idx], res);
+    // max_cnt = select(max_cnt, zero, res);
+    // res = srcptr[idx] == max_val;
+    // max_cnt += select(zero, one, res);
   }
 
   for (int row = 0; row < rows; row++) {
     idx = mad24(row, srcDstStep, col);
+
+    // res = srcptr[idx] > max_val;
+    // max_val = select(max_val, srcptr[idx], res);
+    // max_cnt = select(max_cnt, zero, res);
     res = srcptr[idx] == max_val;
     max_cnt += select(zero, one, res);
-    if(any(res))
-      dstptr[idx] = convert_uchar4(res);
+
+    // if (res.x) {
+    //   idx = mad24(max_cnt.x - 1, srcDstStep, col);
+    //   maxLoc[idx].x = row;
+    // }
+    // if (res.y) {
+    //   idx = mad24(max_cnt.y - 1, srcDstStep, col);
+    //   maxLoc[idx].y = row;
+    // }
+    // if (res.z) {
+    //   idx = mad24(max_cnt.z - 1, srcDstStep, col);
+    //   maxLoc[idx].z = row;
+    // }
+    // if (res.w) {
+    //   idx = mad24(max_cnt.w - 1, srcDstStep, col);
+    //   maxLoc[idx].w = row;
+    // }
   }
 
   // barrier(CLK_LOCAL_MEM_FENCE);
 
-  // maxVal[col] = max_val;
-  // maxCount[col] = max_cnt;
+  maxVal[col] = max_val;
+  maxCount[col] = max_cnt;
 }
 
 // __kernel void __attribute__((reqd_work_group_size(32, 30, 1)))
