@@ -482,7 +482,7 @@ public:
     int initOpenCL();
     int initVideoSource();
 
-    int process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *cl_buffer);
+    int process_frame_with_open_cl(cv::Mat &frame, bool use_buffer);
     int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat &u);
     int process_cl_image_with_opencv(cl_mem image, cv::UMat &u);
 
@@ -758,39 +758,39 @@ int App::initVideoSource()
 // It creates OpenCL buffer or image, depending on use_buffer flag,
 // from input media frame and process these data
 // (inverts each pixel value in half of frame) with OpenCL kernel
-int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem_obj)
+int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer)
 {
     cl_int res = CL_SUCCESS;
 
-    CV_Assert(mem_obj);
+    // CV_Assert(mem_obj);
 
     cl_kernel kernel = 0;
-    cl_mem mem = mem_obj[0];
+    // cl_mem mem = mem_obj[0];
 
-    if (0 == mem)
+    if (0 == m_mem_obj)
     {
         // allocate/delete cl memory objects every frame for the simplicity.
         // in real application more efficient pipeline can be built.
 
         cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR;
 
-        mem = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
-        if (0 == mem || CL_SUCCESS != res)
+        m_mem_obj = clCreateBuffer(m_context, flags, frame.total(), frame.ptr(), &res);
+        if (0 == m_mem_obj || CL_SUCCESS != res)
             return -1;
 
         m_mem_maxval = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.cols * sizeof(uchar), NULL, &res);
         if (0 == m_mem_maxval || CL_SUCCESS != res)
             return -1;
 
-        m_mem_maxloc = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.cols * frame.rows * sizeof(int), NULL, &res);
+        m_mem_maxloc = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.cols * frame.rows * sizeof(uchar), NULL, &res);
         if (0 == m_mem_maxloc || CL_SUCCESS != res)
             return -1;
 
-        m_mem_count = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.cols * sizeof(int), NULL, &res);
+        m_mem_count = clCreateBuffer(m_context, CL_MEM_WRITE_ONLY, frame.cols * sizeof(uchar), NULL, &res);
         if (0 == m_mem_count || CL_SUCCESS != res)
             return -1;
 
-        res = clSetKernelArg(m_kernelBufMaxLoc, 0, sizeof(cl_mem), &mem);
+        res = clSetKernelArg(m_kernelBufMaxLoc, 0, sizeof(cl_mem), &m_mem_obj);
         if (CL_SUCCESS != res)
             return -1;
 
@@ -811,11 +811,11 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
         if (CL_SUCCESS != res)
             return -1;
 
-        res = clSetKernelArg(m_kernelBufMaxLoc, 5, sizeof(cl_mem), &m_mem_maxloc);
+        res = clSetKernelArg(m_kernelBufMaxLoc, 5, sizeof(cl_mem), &m_mem_count);
         if (CL_SUCCESS != res)
             return -1;
 
-        res = clSetKernelArg(m_kernelBufMaxLoc, 6, sizeof(cl_mem), &m_mem_count);
+        res = clSetKernelArg(m_kernelBufMaxLoc, 6, sizeof(cl_mem), &m_mem_maxloc);
         if (CL_SUCCESS != res)
             return -1;
 
@@ -824,16 +824,16 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
 
     // process left half of frame in OpenCL
     size_t globalWorkSize[] = {(size_t)frame.cols/4};
-    size_t localWorkSize[] = {120};
+    size_t localWorkSize[] = {32};
     cl_event asyncEvent = 0;
 
-    res |= clEnqueueWriteBuffer(m_queue, mem, CL_TRUE, 0, frame.total(), frame.ptr(), 0, NULL, NULL);
+    res |= clEnqueueWriteBuffer(m_queue, m_mem_obj, CL_TRUE, 0, frame.total(), frame.ptr(), 0, NULL, NULL);
     uchar zero_maxval = 1;
     res |= clEnqueueFillBuffer(m_queue, m_mem_maxval, &zero_maxval, sizeof(uchar), 0, frame.cols * sizeof(uchar), 0, NULL, NULL);
-    int zero_maxloc = -1;
-    res |= clEnqueueFillBuffer(m_queue, m_mem_maxloc, &zero_maxloc, sizeof(int), 0, frame.cols * frame.rows * sizeof(int), 0, NULL, NULL);
-    int zero_count = 0;
-    res |= clEnqueueFillBuffer(m_queue, m_mem_count, &zero_count, sizeof(int), 0, frame.cols * sizeof(int), 0, NULL, NULL);
+    int zero_maxloc = 0;
+    res |= clEnqueueFillBuffer(m_queue, m_mem_maxloc, &zero_maxloc, sizeof(uchar), 0, frame.cols * frame.rows * sizeof(uchar), 0, NULL, NULL);
+    uchar zero_count = 0;
+    res |= clEnqueueFillBuffer(m_queue, m_mem_count, &zero_count, sizeof(uchar), 0, frame.cols * sizeof(uchar), 0, NULL, NULL);
 
     timerStart();
     res |= clEnqueueNDRangeKernel(m_queue, m_kernelBufMaxLoc, 1, 0, globalWorkSize, localWorkSize, 0, 0, &asyncEvent);
@@ -889,8 +889,7 @@ int App::process_frame_with_open_cl(cv::Mat &frame, bool use_buffer, cl_mem *mem
     clGetEventProfilingInfo(asyncEvent, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     clReleaseEvent(asyncEvent);
 
-    mem_obj[0] = mem;
-
+    // mem_obj[0] = mem;
     return 0;
 }
 
@@ -964,11 +963,11 @@ int App::run()
 
         if (doProcess())
         {
-            process_frame_with_open_cl(m_frameGray, useBuffer(), &m_mem_obj);
+            process_frame_with_open_cl(m_frameGray, useBuffer());
 
             if (useBuffer())
                 process_cl_buffer_with_opencv(
-                    m_mem_obj, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
+                    m_mem_maxloc, m_frameGray.step[0], m_frameGray.rows, m_frameGray.cols, m_frameGray.type(), uframe);
             else
                 process_cl_image_with_opencv(m_mem_obj, uframe);
         }
