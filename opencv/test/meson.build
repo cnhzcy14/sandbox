@@ -64,6 +64,15 @@ executable(
 )
 
 executable(
+    'opencl-isolate',
+    files(
+      'opencl-isolate.cpp'
+    ),
+    dependencies: dep_common,
+    install: true,
+)
+
+executable(
     'cv_test',
     files(
       'cv_test.cpp'

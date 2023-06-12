@@ -160,6 +160,40 @@ __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows,
   maxCount[col] = max_cnt;
 }
 
+__kernel void maxlocvec_(__global uchar4 *srcptr, int srcDstStep, int rows,
+                        int cols, __global uchar4 *maxVal,
+                        __global uchar4 *maxCount, __global uchar4 *dstptr) {
+  int col = get_global_id(0);
+
+  uchar4 max_val = (uchar4)(1);
+  uchar4 max_cnt = (uchar4)(0);
+  const uchar4 one = (uchar4)(1);
+  const uchar4 zero = (uchar4)(0);
+  char4 res;
+  int idx;
+  // uchar4 = dst;
+
+  // find maximum for the kernel
+  for (int row = 0; row < rows; row++) {
+    idx = mad24(row, srcDstStep, col);
+    res = srcptr[idx] > max_val;
+    max_val = select(max_val, srcptr[idx], res);
+  }
+
+  for (int row = 0; row < rows; row++) {
+    idx = mad24(row, srcDstStep, col);
+    res = srcptr[idx] == max_val;
+    max_cnt += select(zero, one, res);
+    if(any(res))
+      dstptr[idx] = convert_uchar4(res);
+  }
+
+  // barrier(CLK_LOCAL_MEM_FENCE);
+
+  // maxVal[col] = max_val;
+  // maxCount[col] = max_cnt;
+}
+
 // __kernel void __attribute__((reqd_work_group_size(32, 30, 1)))
 __kernel void gaussian(__read_only image2d_t srcImg,
                        __write_only image2d_t dstImg, __constant float *filter,

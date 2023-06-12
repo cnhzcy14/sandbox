@@ -29,9 +29,9 @@ __kernel void bitwise_inv_buf_8uC1(__global uchar16 *pSrcDst, int srcDstStep,
   int y = get_global_id(1);
   int idx = mad24(y, srcDstStep, x);
   // uchar4 a = ~pSrcDst[idx];
-  // pSrcDst[idx] = ~pSrcDst[idx];
-  pSrcDst[idx] = (uchar16)(0, 20, 60, 100, 140, 180, 220, 255, 0, 20, 60, 100,
-                           140, 180, 220, 255);
+  pSrcDst[idx] = pSrcDst[idx];
+  // pSrcDst[idx] = (uchar16)(0, 20, 60, 100, 140, 180, 220, 255, 0, 20, 60, 100,
+  //                          140, 180, 220, 255);
   // pSrcDst[idx].s0 = 100;
   // pSrcDst[idx].s1 = 140;
   // pSrcDst[idx].s2 = 180;
@@ -105,15 +105,18 @@ __kernel void maxloc(__global uchar *srcptr, int srcDstStep, int rows, int cols,
 }
 
 __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows,
-                        int cols, __global uchar4 *maxVal,
-                        __global uchar4 *maxCount, __global uchar4 *dstptr) {
+                        int cols, __global uchar4 *maxVal, __global int4 *maxY,
+                        __global uchar4 *dstptr) {
   int col = get_global_id(0);
 
-  uchar4 max_val = (uchar4)(1);
+  uchar4 max_val = (uchar4)(50);
   uchar4 max_cnt = (uchar4)(0);
   const uchar4 one = (uchar4)(1);
   const uchar4 zero = (uchar4)(0);
   char4 res;
+  char4 tmp_res = (char4)(0);
+  char4 last_res = (char4)(0);
+  int4 minus = (int4)(-1);
   int idx;
   // uchar4 = dst;
 
@@ -124,18 +127,44 @@ __kernel void maxlocvec(__global uchar4 *srcptr, int srcDstStep, int rows,
     max_val = select(max_val, srcptr[idx], res);
   }
 
-  for (int row = 0; row < rows; row++) {
+  for (int row = rows - 1; row >= 0; row--) {
     idx = mad24(row, srcDstStep, col);
-    res = srcptr[idx] == max_val;
-    max_cnt += select(zero, one, res);
-    if(any(res))
-      dstptr[idx] = convert_uchar4(res);
+    res = (srcptr[idx] == max_val) | last_res;
+    tmp_res = res - last_res;
+    // max_cnt += select(zero, one, res);
+    if (any(tmp_res)) {
+      dstptr[idx] = convert_uchar4(tmp_res);
+      maxY[col] = select(minus, (int4)(row), convert_int4(tmp_res));
+    }
+    last_res = last_res | res;
   }
 
   // barrier(CLK_LOCAL_MEM_FENCE);
 
   // maxVal[col] = max_val;
   // maxCount[col] = max_cnt;
+}
+
+__kernel void isolate(__global uchar *srcptr, __global uchar *dstptr,
+                      __global int *maxYsrc, __global int *maxYdst, int step,
+                      int radius) {
+  int x = get_global_id(0);
+  int y = maxYsrc[x];
+  int n = 0;
+  int id;
+
+  for (int xx = x - radius; xx <= x + radius; xx++) {
+    for (int yy = y - radius; yy <= y + radius; yy++) {
+      id = mad24(yy, step, xx);
+      if (srcptr[id])
+        n++;
+    }
+  }
+  if (n >= radius + 1) {
+    maxYdst[x] = y;
+    id = mad24(y, step, x);
+    dstptr[id] = 0xff;
+  }
 }
 
 // __kernel void __attribute__((reqd_work_group_size(32, 30, 1)))
