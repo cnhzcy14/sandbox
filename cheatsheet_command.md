@@ -166,3 +166,22 @@ gsettings set org.gnome.shell.extensions.desktop-icons show-trash false
 gsettings set org.gnome.shell.extensions.desktop-icons show-home false
 gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
 ```
+
+# clash
+```
+sudo vi /etc/environment
+
+http_proxy=http://127.0.0.1:7890/
+https_proxy=http://127.0.0.1:7890/
+#ftp_proxy=http://myproxy.server.com:8080/
+no_proxy="localhost,127.0.0.0/8,::1"
+HTTP_PROXY=http://127.0.0.1:7890/
+HTTPS_PROXY=http://127.0.0.1:7890/
+#FTP_PROXY=http://myproxy.server.com:8080/
+NO_PROXY="localhost,127.0.0.0/8,::1"
+
+sudo vi /etc/apt/apt.conf.d/proxy.conf
+
+Acquire::http::Proxy "http://127.0.0.1:7890/";
+Acquire::https::Proxy "http://127.0.0.1:7890/";
+```
