@@ -5,6 +5,12 @@ nvprof -f --output-profile profile.log
 export NVX_PROF=nvtx
 ```
 
+## linux
+```
+right compare
+ls -l 
+```
+
 ## v4l2
 
 ```
