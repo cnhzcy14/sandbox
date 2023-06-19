@@ -159,6 +159,8 @@ echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 
 echo 800000000 > /sys/class/devfreq/ff9a0000.gpu/max_freq
 echo performance > /sys/class/devfreq/ff9a0000.gpu/governor 
+
+cat /sys/class/devfreq/dmc/governor
 ```
 
 # sha512
