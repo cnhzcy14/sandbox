@@ -35,6 +35,9 @@ target_link_libraries 	( opencl-maxloc ${OpenCV_LIBS} OpenCL::OpenCL)
 add_executable		    ( opencl-maxloc-vec opencl-maxloc-vec.cpp)
 target_link_libraries 	( opencl-maxloc-vec ${OpenCV_LIBS} OpenCL::OpenCL)
 
+add_executable		    ( opencl-isolate opencl-isolate.cpp)
+target_link_libraries 	( opencl-isolate ${OpenCV_LIBS} OpenCL::OpenCL)
+
 add_executable          (cv_yuv cv_yuv.cpp)
 target_link_libraries   (cv_yuv ${OpenCV_LIBS})
 
@@ -49,4 +52,5 @@ install(
         opencl-histogram
         opencl-maxloc
         opencl-maxloc-vec
+        opencl-isolate
     RUNTIME DESTINATION bin)
