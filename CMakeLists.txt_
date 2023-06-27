@@ -95,7 +95,7 @@ endif()
 # set(LIBS ${LIBS} ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} ${GSTREAMER_BASE_LIBRARIES} gstallocators-1.0 gstcontroller-1.0 gstaudio-1.0)
 
 
-# add_subdirectory 		(opencl/test)
+add_subdirectory 		(opencl/test)
 # add_subdirectory 		(opencl/Exercises/Exercise01/C)
 # add_subdirectory 		(opencl/Solutions/Exercise04/C)
 # add_subdirectory 		(opencl/Solutions/Exercise05/C)

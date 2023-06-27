@@ -1,4 +1,4 @@
-dep_common = [dep_mali]
+dep_common = [dep_ocl]
 
 executable(
     'cl_test',

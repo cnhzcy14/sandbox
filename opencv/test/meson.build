@@ -1,4 +1,4 @@
-dep_common = [dep_mali, dep_ocv]
+dep_common = [dep_ocl, dep_ocv]
 
 executable(
     'opencl-opencv-interop',

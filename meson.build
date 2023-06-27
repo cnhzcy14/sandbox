@@ -17,7 +17,8 @@ dep_dl = cc.find_library('dl', required : false)
 dep_drm = dependency('libdrm')
 dep_v4l2 = dependency('libv4l2')
 dep_gbm = dependency('gbm')
-dep_mali = dependency('mali')
+# dep_mali = dependency('mali')
+dep_ocl = dependency('OpenCL')
 
 # drm
 subdir('drm/gbm')
