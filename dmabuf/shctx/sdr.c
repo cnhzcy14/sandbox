@@ -176,7 +176,7 @@ unsigned int load_shader(const char *fname, unsigned int sdr_type)
 		fclose(fp);
 		return 0;
 	}
-	fread(src, 1, filesize, fp);
+	size_t ret = fread(src, 1, filesize, fp);
 	src[filesize] = 0;
 	fclose(fp);
 

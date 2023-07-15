@@ -1,0 +1,5 @@
+# ignore dot files/directories
+.*
+!.gitignore
+.vscode
+build*

@@ -518,7 +518,7 @@ char * getKernelSource(char *filename)
         fprintf(stderr, "Error: Could not allocate memory for source string\n");
         exit(EXIT_FAILURE);
     }
-    fread(source, sizeof(char), len, file);
+    size_t ret = fread(source, sizeof(char), len, file);
     fclose(file);
     return source;
 }

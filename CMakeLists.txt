@@ -4,7 +4,7 @@ project(${PROJECT_NAME}
   DESCRIPTION "My test code" 
   LANGUAGES CXX C)
 
-set(CMAKE_BUILD_TYPE "Release")
+# set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3")
@@ -35,6 +35,7 @@ pkg_check_modules(GBM REQUIRED IMPORTED_TARGET gbm)
 find_package(CUDA)
 if(${CUDA_FOUND})
   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
+  find_package(OpenCL REQUIRED)
 else()
   find_package(OpenCL REQUIRED)
 endif()
