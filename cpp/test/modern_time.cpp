@@ -15,7 +15,6 @@ int main()
     double elapsed_miliseconds =
         1.e-3 * sc::duration_cast<sc::microseconds>(end - start).count();
 
-    // std::chrono::duration<double> elapsed_miliseconds = end - start;
     std::time_t end_time = sc::system_clock::to_time_t(end);
 
     std::cout << "finished computation at " << std::ctime(&end_time)
