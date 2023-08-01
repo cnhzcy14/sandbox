@@ -12,45 +12,29 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 # set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
 
-if(LINUX)
-find_package(X11 QUIET)
-message(STATUS "X11:         ${X11_FOUND}")
+if(UNIX AND NOT APPLE)
+  find_package(X11 QUIET)
   find_package(PkgConfig QUIET) # for some lib without cmakeconfig
   pkg_check_modules(DRM QUIET IMPORTED_TARGET libdrm)
-  message(STATUS "libdrm:          ${DRM_FOUND}")
   pkg_check_modules(V4L2 QUIET IMPORTED_TARGET libv4l2)
-  message(STATUS "V4L2:         ${V4L2_FOUND}")
   pkg_check_modules(GBM QUIET IMPORTED_TARGET gbm)
-  message(STATUS "GBM:          ${GBM_FOUND}")
   pkg_check_modules(GLIB_JSON QUIET IMPORTED_TARGET json-glib-1.0)
-  message(STATUS "GBM:          ${GBM_FOUND}")
+  pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
 endif()
 
 find_package(OpenCV QUIET)
-message(STATUS "OpenCV:         ${OpenCV_FOUND}")
 find_package(Eigen3 QUIET NO_MODULE)
-message(STATUS "Eigen3:         ${Eigen3_FOUND}")
 find_package(apriltag QUIET)
-message(STATUS "apriltag:         ${apriltag_FOUND}")
 find_package(vpi QUIET)
-message(STATUS "vpi:         ${vpi_FOUND}")
 find_package(OpenMP QUIET)
-message(STATUS "OpenMP:         ${OpenMP_FOUND}")
 find_package(Threads QUIET)
-message(STATUS "Threads:         ${Threads_FOUND}")
 find_package(OpenGL QUIET)
-message(STATUS "OpenGL:         ${OpenGL_FOUND}")
-
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
-message(STATUS "MATH_LIBRARY:         ${MATH_LIBRARY}")
-
 find_package(CUDA QUIET)
-message(STATUS "CUDA:           ${CUDA_FOUND}")
 if(${CUDA_FOUND})
   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
 endif()
 find_package(OpenCL QUIET)
-message(STATUS "OpenCL:         ${OpenCL_FOUND}")
 
 # link_directories(/usr/lib/aarch64-linux-gnu)
 # set(LIBS ${LIBS} Mali)
@@ -68,7 +52,6 @@ message(STATUS "OpenCL:         ${OpenCL_FOUND}")
 #     message(STATUS "OPENVX_LIBRARIES: \t<empty>")
 # endif()
 
-
 # pkg_check_modules(BLAS REQUIRED IMPORTED_TARGET blas64)
 # set(LIBS ${LIBS} PkgConfig::BLAS)
 
@@ -79,15 +62,9 @@ message(STATUS "OpenCL:         ${OpenCL_FOUND}")
 # pkg_check_modules(GLOG REQUIRED IMPORTED_TARGET libglog)
 # set(LIBS ${LIBS} PkgConfig::GLOG)
 
-
 # find_package(Ceres REQUIRED)
 # set(LIBS ${LIBS} ceres )
 
-# opencl
-# include_directories(~/work/project/test_code/opencl/common)
-# set(OCL_SRC_LIST ${OCL_SRC_LIST} 
-#                 ~/work/project/test_code/opencl/common/device_info.c 
-#                 ~/work/project/test_code/opencl/common/wtime.c)
 
 # jsoncpp
 # pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
@@ -96,17 +73,6 @@ message(STATUS "OpenCL:         ${OpenCL_FOUND}")
 # 0mq
 # pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 # set(LIBS ${LIBS} PkgConfig::ZMQ)
-
-# gstreamer
-# pkg_check_modules(GST_RTSP REQUIRED IMPORTED_TARGET gstreamer-rtsp-server-1.0)
-# set(LIBS ${LIBS} PkgConfig::GST_RTSP)
-
-
-# find_package(GStreamer REQUIRED)
-# include_directories( ${GSTREAMER_INCLUDE_DIRS} )
-# include_directories( /usr/include/gstreamer-1.0 )
-# set(LIBS ${LIBS} ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES} ${GSTREAMER_BASE_LIBRARIES} gstallocators-1.0 gstcontroller-1.0 gstaudio-1.0)
-
 
 add_subdirectory 		(opencl/test)
 # add_subdirectory 		(opencl/Exercises/Exercise01/C)
@@ -128,8 +94,8 @@ add_subdirectory 		(opencl/matmul)
 # add_subdirectory 		(openvx/test)
 # add_subdirectory 		(openvx/bubble-pop)
 
-# opencv
 add_subdirectory 		(opencv/test)
+add_subdirectory 		(opencv/ocl_interop)
 # add_subdirectory 		(opencv/dist)
 # add_subdirectory 		(opencv/warpCamera)
 # add_subdirectory 		(opencv/thresholding)
@@ -212,7 +178,26 @@ add_subdirectory 		(drm/drm-howto)
 
 message(STATUS)
 message(STATUS "======================================================================")
-message(STATUS "General configuration for: ${PROJECT_NAME}")
+message(STATUS "Author:                 Simon CHENG Ye")
+message(STATUS "Project Name:           ${PROJECT_NAME}")
+message(STATUS "  ------")
+message(STATUS "  X11:                  ${X11_FOUND}")
+message(STATUS "  DRM:                  ${DRM_FOUND}")
+message(STATUS "  V4L2:                 ${V4L2_FOUND}")
+message(STATUS "  GBM:                  ${GBM_FOUND}")
+message(STATUS "  GLIB_JSON:            ${GLIB_JSON_FOUND}")
+message(STATUS "  GST_RTSP:             ${GST_RTSP_FOUND}")
+message(STATUS "  OpenCV:               ${OpenCV_FOUND}")
+message(STATUS "  Eigen3:               ${Eigen3_FOUND}")
+message(STATUS "  apriltag:             ${apriltag_FOUND}")
+message(STATUS "  vpi:                  ${vpi_FOUND}")
+message(STATUS "  OpenMP:               ${OpenMP_FOUND}")
+message(STATUS "  Threads:              ${Threads_FOUND}")
+message(STATUS "  OpenGL:               ${OpenGL_FOUND}")
+message(STATUS "  MATH_LIBRARY:         ${MATH_LIBRARY}")
+message(STATUS "  CUDA:                 ${CUDA_FOUND}")
+message(STATUS "  OpenCL:               ${OpenCL_FOUND}")
+message(STATUS "  ------")
 message(STATUS "  C/C++ Standard:       ${CMAKE_C_STANDARD}/${CMAKE_CXX_STANDARD}")
 message(STATUS "  CMake Version:        ${CMAKE_VERSION}")
 message(STATUS "  Default Install:      ${CMAKE_INSTALL_PREFIX}")
