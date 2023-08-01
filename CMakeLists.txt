@@ -6,7 +6,7 @@ project(${PROJECT_NAME}
 
 # set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # option(MY_OPTION "This is settable from the command line" OFF)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
