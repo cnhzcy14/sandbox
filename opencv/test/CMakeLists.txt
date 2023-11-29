@@ -11,6 +11,13 @@ target_link_libraries   (cv_test ${OpenCV_LIBS})
 add_executable          (cv_yuv cv_yuv.cpp)
 target_link_libraries   (cv_yuv ${OpenCV_LIBS})
 
+add_executable          (bg_sub bg_sub.cpp)
+target_link_libraries   (bg_sub ${OpenCV_LIBS})
+
+add_executable          (object_detection object_detection.cpp)
+target_link_libraries   (object_detection ${OpenCV_LIBS})
+
+
 install(
     TARGETS 
         cv_test 
