@@ -70,4 +70,6 @@ gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,width=640,height=480 ! v
 gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,format=GRAY8,width=640,height=480 ! tee name=t allow-not-linked=1 ! queue2 ! glimagesink  t. ! queue2 ! videorate max-rate=30 rate=30 ! glimagesink sync=false
 
 gst-launch-1.0 multifilesrc location="/home/cnhzcy14/work/data/vio/test/image/%08d.png" index=0 caps="image/png,framerate=30/1" ! pngdec ! nvvideoconvert ! m.sink_0 nvstreammux name=m batch-size=1 width=1280 height=960 ! nvof preset-level=2 ! nvofvisual ! nvmultistreamtiler width=1280 height=960 ! nveglglessink
+
+gst-launch-1.0 v4l2src ! video/x-raw,width=640,height=480 ! videoconvert ! nvvideoconvert ! queue ! m.sink_0 nvstreammux name=m batch-size=1 width=640 height=480 batched-push-timeout=40000 live-source=1 nvbuf-memory-type=0 ! nvof preset-level=2 ! nvofvisual ! nveglglessink
 ```
