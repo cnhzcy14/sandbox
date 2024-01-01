@@ -30,8 +30,9 @@ find_package(OpenMP QUIET)
 find_package(Threads QUIET)
 find_package(OpenGL QUIET)
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
-find_package(CUDA QUIET)
 
+
+# find_package(CUDA)
 include(CheckLanguage)
 check_language(CUDA)
 if(CMAKE_CUDA_COMPILER)
@@ -150,7 +151,7 @@ add_subdirectory 		(eigen)
 add_subdirectory 		(cuda/test)
 # add_subdirectory 		(cuda/ratio_test)
 # add_subdirectory 		(cuda/batchCUBLAS)
-# add_subdirectory 		(cuda/cuSolverDn_LinearSolver)
+add_subdirectory 		(cuda/cuSolverDn_LinearSolver)
 
 # cpp
 add_subdirectory 		(cpp/test)
