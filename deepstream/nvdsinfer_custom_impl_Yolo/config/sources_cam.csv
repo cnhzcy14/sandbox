@@ -1,0 +1,2 @@
+enable,type,camera-v4l2-dev-node,camera-width,camera-height,num-sources,gpu-id,cudadec-memtype
+1,1,0,640,480,1,0,0

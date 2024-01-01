@@ -6,9 +6,11 @@ SET(NVDS_LIBS
   nvdsgst_meta
   nvdsgst_helper
   nvdsgst_smartrecord
+  nvdsgst_meta
   nvds_meta
   nvds_msgbroker
   nvds_utils
+  nvds_yml_parser
 )
 
 # Find all libraries in list.

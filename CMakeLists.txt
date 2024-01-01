@@ -4,35 +4,11 @@ project(${PROJECT_NAME}
   DESCRIPTION "My test code" 
   LANGUAGES CXX C)
 
-# set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-# option(MY_OPTION "This is settable from the command line" OFF)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-# set(CMAKE_INSTALL_PREFIX "/usr/lib/aarch64-linux-gnu")
 
-if(UNIX AND NOT APPLE)
-  find_package(X11 QUIET)
-  find_package(PkgConfig QUIET) # for some lib without cmakeconfig
-  pkg_check_modules(DRM QUIET IMPORTED_TARGET libdrm)
-  pkg_check_modules(V4L2 QUIET IMPORTED_TARGET libv4l2)
-  pkg_check_modules(GBM QUIET IMPORTED_TARGET gbm)
-  pkg_check_modules(GLIB_JSON QUIET IMPORTED_TARGET json-glib-1.0)
-  pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
-endif()
-
-find_package(OpenCV QUIET)
-find_package(Eigen3 QUIET NO_MODULE)
-find_package(apriltag QUIET)
-find_package(vpi QUIET)
-find_package(OpenMP QUIET)
-find_package(Threads QUIET)
-find_package(OpenGL QUIET)
-find_library(MATH_LIBRARY m) # special for finding libm (math.h)
-
-
-# find_package(CUDA)
+find_package(CUDA)
 include(CheckLanguage)
 check_language(CUDA)
 if(CMAKE_CUDA_COMPILER)
@@ -41,6 +17,35 @@ if(CMAKE_CUDA_COMPILER)
   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
 endif()
 find_package(OpenCL QUIET)
+
+if(UNIX AND NOT APPLE)
+  find_package(X11 QUIET)
+  find_package(PkgConfig QUIET) # for some lib without cmakeconfig
+  pkg_check_modules(DRM QUIET IMPORTED_TARGET libdrm)
+  pkg_check_modules(V4L2 QUIET IMPORTED_TARGET libv4l2)
+  pkg_check_modules(GBM QUIET IMPORTED_TARGET gbm)
+  pkg_check_modules(GLIB QUIET IMPORTED_TARGET glib-2.0)
+  pkg_check_modules(GLIB_JSON QUIET IMPORTED_TARGET json-glib-1.0)
+  pkg_check_modules(GSTREAMER QUIET IMPORTED_TARGET gstreamer-1.0)
+  pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
+endif()
+
+find_package(OpenCV QUIET)
+find_package(yaml-cpp)
+
+find_package(Eigen3 QUIET NO_MODULE)
+find_package(apriltag QUIET)
+find_package(vpi QUIET)
+find_package(OpenMP QUIET)
+find_package(Threads QUIET)
+find_package(OpenGL QUIET)
+find_library(MATH_LIBRARY m) # special for finding libm (math.h)
+find_package(TensorRT QUIET)
+find_package(DeepstreamAppCommon QUIET)
+find_package(NVDS QUIET)
+
+
+
 
 # link_directories(/usr/lib/aarch64-linux-gnu)
 # set(LIBS ${LIBS} Mali)
@@ -146,7 +151,7 @@ add_subdirectory 		(eigen)
 # add_subdirectory 		(gstreamer/gobject_tutorial/05_public_methods)
 # add_subdirectory 		(gstreamer/gobject_tutorial/06_inheritence)
 # add_subdirectory 		(gstreamer/gobject_tutorial/07_virtual_methods)
-# add_subdirectory 		(gstreamer/tutorial)
+add_subdirectory 		(gstreamer/tutorial)
 
 add_subdirectory 		(cuda/test)
 # add_subdirectory 		(cuda/ratio_test)
@@ -180,20 +185,28 @@ add_subdirectory 		(drm/drm-howto)
 # VPI
 # add_subdirectory 		(vpi/samples)
 
+# deepstream
+add_subdirectory 		(deepstream/deepstream-test1)
+
 
 
 message(STATUS)
 message(STATUS "======================================================================" )
 message(STATUS "Author:                 Simon CHENG Ye"                                 )  
 message(STATUS "Project Name:           ${PROJECT_NAME}"                                )
-message(STATUS "  ------"                                                               )
-message(STATUS "  X11:                  ${X11_FOUND}"                                   )
+message(STATUS "  ------ Find by pkgconfig: "                                           )
 message(STATUS "  DRM:                  ${DRM_FOUND}"                                   )
 message(STATUS "  V4L2:                 ${V4L2_FOUND}"                                  )
 message(STATUS "  GBM:                  ${GBM_FOUND}"                                   )
+message(STATUS "  GLIB:                 ${GLIB_FOUND}"                                  )
 message(STATUS "  GLIB_JSON:            ${GLIB_JSON_FOUND}"                             )
+message(STATUS "  GSTREAMER:            ${GSTREAMER_FOUND}"                             )
 message(STATUS "  GST_RTSP:             ${GST_RTSP_FOUND}"                              )
+message(STATUS "  ------ Find by cmake: "                                               )
 message(STATUS "  OpenCV:               ${OpenCV_FOUND}"                                )
+message(STATUS "  YAML_CPP:             ${YAML_CPP_LIBRARIES}"                          )
+message(STATUS "  ------ Find by modern cmake: "                                        )
+message(STATUS "  X11:                  ${X11_FOUND}"                                   )
 message(STATUS "  Eigen3:               ${Eigen3_FOUND}"                                )
 message(STATUS "  apriltag:             ${apriltag_FOUND}"                              )
 message(STATUS "  vpi:                  ${vpi_FOUND}"                                   )
@@ -203,6 +216,9 @@ message(STATUS "  OpenGL:               ${OpenGL_FOUND}"                        
 message(STATUS "  MATH_LIBRARY:         ${MATH_LIBRARY}"                                )
 message(STATUS "  CUDA:                 ${CUDA_FOUND}"                                  )
 message(STATUS "  OpenCL:               ${OpenCL_FOUND}"                                )
+message(STATUS "  TensorRT:             ${TensorRT_FOUND}"                              )
+message(STATUS "  DeepstreamAppCommon:  ${DeepstreamAppCommon_FOUND}"                   )
+message(STATUS "  NVDS:                 ${NVDS_FOUND}"                                  )
 message(STATUS "  ------"                                                               )
 message(STATUS "  C/C++ Standard:       ${CMAKE_C_STANDARD}/${CMAKE_CXX_STANDARD}"      )
 message(STATUS "  CMake Version:        ${CMAKE_VERSION}"                               )
