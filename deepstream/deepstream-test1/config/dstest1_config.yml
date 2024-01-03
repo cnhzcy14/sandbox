@@ -29,3 +29,6 @@ streammux:
   width: 1920
   height: 1080
 
+primary-gie:
+  enable: 1
+  config-file-path: dstest1_pgie_config.yml
