@@ -19,7 +19,7 @@ property:
   #workspace-size: 2000
   parse-bbox-func-name: NvDsInferParseYolo
   # parse-bbox-func-name: NvDsInferParseYoloCuda
-  custom-lib-path: /media/cnhzcy14/work/project/deepstream_app/build/libnvdsinfer_custom_impl_Yolo.so
+  custom-lib-path: /media/cnhzcy14/work/project/sandbox/lib/libnvdsinfer_custom_impl_Yolo.so
   engine-create-func-name: NvDsInferYoloCudaEngineGet
 
 class-attrs-all:

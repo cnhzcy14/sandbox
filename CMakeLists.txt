@@ -7,6 +7,8 @@ project(${PROJECT_NAME}
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 
 find_package(CUDA)
 include(CheckLanguage)
@@ -189,7 +191,7 @@ add_subdirectory 		(drm/drm-howto)
 # deepstream
 add_subdirectory 		(deepstream/deepstream-test1)
 add_subdirectory 		(deepstream/deepstream-app)
-
+add_subdirectory 		(deepstream/nvdsinfer_custom_impl_Yolo)
 
 
 message(STATUS)
