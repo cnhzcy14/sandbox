@@ -239,14 +239,14 @@ int main(int argc, char *argv[])
     }
 
     /* we set the input filename to the source element */
-    g_object_set(G_OBJECT(source), "location", "/media/cnhzcy14/work/data/downcam/img/frame%04d.png", NULL);
+    g_object_set(G_OBJECT(source), "location", "/media/cnhzcy14/other/data/downcam/img/frame%04d.png", NULL);
 
 
     g_object_set(G_OBJECT(nvvidconv), "flip-method", 6, NULL);
     // if (g_str_has_suffix (argv[1], ".h264")) {
     // g_object_set (G_OBJECT (source), "location", argv[1], NULL);
 
-    g_object_set(G_OBJECT(streammux), "live-source", 1, NULL);
+    g_object_set(G_OBJECT(streammux), "live-source", 0, NULL);
     g_object_set(G_OBJECT(streammux), "nvbuf-memory-type", 0, NULL);
     g_object_set(G_OBJECT(streammux), "batch-size", 1, NULL);
     g_object_set(G_OBJECT(streammux), "width", MUXER_OUTPUT_WIDTH, "height",
@@ -265,6 +265,7 @@ int main(int argc, char *argv[])
         // nvds_parse_file_source(source, argv[1], "source");
         nvds_parse_streammux(streammux, argv[1], "streammux");
         nvds_parse_gie(pgie, argv[1], "primary-gie");
+        nvds_parse_osd(nvosd, argv[1], "osd");
         /* Set all the necessary properties of the nvinfer element,
          * the necessary ones are : */
         // g_object_set(G_OBJECT(pgie),
@@ -354,10 +355,14 @@ int main(int argc, char *argv[])
      * had got all the metadata. */
     osd_sink_pad = gst_element_get_static_pad(nvosd, "sink");
     if (!osd_sink_pad)
+    {
         g_print("Unable to get sink pad\n");
+    }
     else
+    {
         gst_pad_add_probe(osd_sink_pad, GST_PAD_PROBE_TYPE_BUFFER,
                           osd_sink_pad_buffer_probe, NULL, NULL);
+    }
     gst_object_unref(osd_sink_pad);
 
     /* Set the pipeline to "playing" state */

@@ -28,6 +28,7 @@ if(UNIX AND NOT APPLE)
   pkg_check_modules(GLIB_JSON QUIET IMPORTED_TARGET json-glib-1.0)
   pkg_check_modules(GSTREAMER QUIET IMPORTED_TARGET gstreamer-1.0)
   pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
+  pkg_check_modules(GST_VIDEO QUIET IMPORTED_TARGET gstreamer-video-1.0)
 endif()
 
 find_package(OpenCV QUIET)
@@ -187,6 +188,7 @@ add_subdirectory 		(drm/drm-howto)
 
 # deepstream
 add_subdirectory 		(deepstream/deepstream-test1)
+add_subdirectory 		(deepstream/deepstream-app)
 
 
 
@@ -202,6 +204,7 @@ message(STATUS "  GLIB:                 ${GLIB_FOUND}"                          
 message(STATUS "  GLIB_JSON:            ${GLIB_JSON_FOUND}"                             )
 message(STATUS "  GSTREAMER:            ${GSTREAMER_FOUND}"                             )
 message(STATUS "  GST_RTSP:             ${GST_RTSP_FOUND}"                              )
+message(STATUS "  GST_VIDEO:            ${GST_VIDEO_FOUND}"                             )
 message(STATUS "  ------ Find by cmake: "                                               )
 message(STATUS "  OpenCV:               ${OpenCV_FOUND}"                                )
 message(STATUS "  YAML_CPP:             ${YAML_CPP_LIBRARIES}"                          )

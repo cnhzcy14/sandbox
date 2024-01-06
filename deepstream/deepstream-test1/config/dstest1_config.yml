@@ -21,7 +21,7 @@
 ################################################################################
 
 source:
-  location: /opt/nvidia/deepstream/deepstream/samples/streams/sample_720p.h264
+  location: /media/cnhzcy14/other/data/streams/sample_720p.h264
 
 streammux:
   batch-size: 1
@@ -31,4 +31,23 @@ streammux:
 
 primary-gie:
   enable: 1
-  config-file-path: dstest1_pgie_config.yml
+  gpu-id: 0
+  # config-file-path: dstest1_pgie_config.yml
+  config-file-path: /media/cnhzcy14/work/project/sandbox/deepstream/nvdsinfer_custom_impl_Yolo/config/config_infer_primary_yoloV8.yml
+
+osd:
+  enable: 1
+  gpu-id: 0
+  process-mode: 1
+  # display-bbox: 0
+  # border-width: 5
+  # text-size: 15
+  # text-color: 1;1;1;1
+  # text-bg-color: 0.3;0.3;0.3;1
+  # font: Serif
+  # show-clock: 0
+  # clock-x-offset: 800
+  # clock-y-offset: 820
+  # clock-text-size: 12
+  # clock-color: 1;0;0;0
+  # nvbuf-memory-type: 0
