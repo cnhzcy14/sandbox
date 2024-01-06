@@ -21,13 +21,20 @@
 ################################################################################
 
 source:
-  location: /media/cnhzcy14/other/data/streams/sample_720p.h264
+  # location: /media/cnhzcy14/other/data/streams/sample_720p.h264
+  # location: /media/cnhzcy14/other/data/downcam/img/frame%04d.png
+  camera-id: 0
+  camera-v4l2-dev-node: 0
+  camera-width: 640
+  camera-height: 480
 
 streammux:
   batch-size: 1
   batched-push-timeout: 40000
-  width: 1280
-  height: 720
+  width: 640
+  height: 480
+  live-source: 1
+  nvbuf-memory-type: 0
 
 primary-gie:
   enable: 1

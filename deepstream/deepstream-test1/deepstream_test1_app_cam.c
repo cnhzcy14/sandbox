@@ -32,15 +32,6 @@
 #define PGIE_CLASS_ID_VEHICLE 0
 #define PGIE_CLASS_ID_PERSON 2
 
-/* The muxer output resolution must be set if the input streams will be of
- * different resolution. The muxer will scale all the input frames to this
- * resolution. */
-#define MUXER_OUTPUT_WIDTH 1280
-#define MUXER_OUTPUT_HEIGHT 720
-
-/* Muxer batch formation timeout, for e.g. 40 millisec. Should ideally be set
- * based on the fastest source's framerate. */
-#define MUXER_BATCH_TIMEOUT_USEC 40000
 
 gint frame_number = 0;
 gchar pgie_classes_str[4][32] = {"Vehicle", "TwoWheeler", "Person",
@@ -183,17 +174,14 @@ int main(int argc, char *argv[])
     pipeline = gst_pipeline_new("dstest1-pipeline");
 
     /* Source element for reading from the file */
-    // source = gst_element_factory_make ("filesrc", "file-source");
-    source = gst_element_factory_make("multifilesrc", "img-source");
-
-    caps = gst_caps_new_simple("video/x-raw",
-                               "width", G_TYPE_INT, 480,
-                               "height", G_TYPE_INT, 640,
-                               NULL);
+    // source = gst_element_factory_make ("filesrc", "source");
+    // source = gst_element_factory_make("multifilesrc", "source");
+    source = gst_element_factory_make("v4l2src", "source");
 
     /* Since the data format in the input file is elementary h264 stream,
      * we need a h264parser */
-    convert = gst_element_factory_make("pngdec", "pngdec");
+    // convert = gst_element_factory_make("pngdec", "pngdec");
+    convert = gst_element_factory_make("videoconvert", "videoconvert");
 
     /* Use nvdec_h264 for hardware accelerated decode on GPU */
     nvconvert = gst_element_factory_make("nvvideoconvert", "nvvideoconvert");
@@ -238,38 +226,15 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* we set the input filename to the source element */
-    g_object_set(G_OBJECT(source), "location", "/media/cnhzcy14/other/data/downcam/img/frame%04d.png", NULL);
-
-
-    g_object_set(G_OBJECT(nvvidconv), "flip-method", 6, NULL);
-    // if (g_str_has_suffix (argv[1], ".h264")) {
-    // g_object_set (G_OBJECT (source), "location", argv[1], NULL);
-
-    g_object_set(G_OBJECT(streammux), "live-source", 0, NULL);
-    g_object_set(G_OBJECT(streammux), "nvbuf-memory-type", 0, NULL);
-    g_object_set(G_OBJECT(streammux), "batch-size", 1, NULL);
-    g_object_set(G_OBJECT(streammux), "width", MUXER_OUTPUT_WIDTH, "height",
-                 MUXER_OUTPUT_HEIGHT,
-                 "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
-
-    /* Set all the necessary properties of the nvinfer element,
-     * the necessary ones are : */
-    // g_object_set(G_OBJECT(pgie),
-    //              "config-file-path", "dstest1_pgie_config.txt", NULL);
-    // }
+    // g_object_set(G_OBJECT(nvvidconv), "flip-method", 6, NULL);
 
     if (g_str_has_suffix(argv[1], ".yml") || g_str_has_suffix(argv[1], ".yaml"))
     {
-
-        // nvds_parse_file_source(source, argv[1], "source");
+        // nvds_parse_multifilesrc(source, argv[1], "source");
+        nvds_parse_v4l2src(source, argv[1], "source");
         nvds_parse_streammux(streammux, argv[1], "streammux");
         nvds_parse_gie(pgie, argv[1], "primary-gie");
         nvds_parse_osd(nvosd, argv[1], "osd");
-        /* Set all the necessary properties of the nvinfer element,
-         * the necessary ones are : */
-        // g_object_set(G_OBJECT(pgie),
-        //              "config-file-path", "dstest1_pgie_config.yml", NULL);
     }
 
     /* we add a message handler */
