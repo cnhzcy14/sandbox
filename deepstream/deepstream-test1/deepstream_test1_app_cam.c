@@ -29,13 +29,13 @@
 
 #define MAX_DISPLAY_LEN 64
 
-#define PGIE_CLASS_ID_VEHICLE 0
-#define PGIE_CLASS_ID_PERSON 2
+// #define PGIE_CLASS_ID_VEHICLE 
+#define PGIE_CLASS_ID_PERSON 0
 
 
 gint frame_number = 0;
-gchar pgie_classes_str[4][32] = {"Vehicle", "TwoWheeler", "Person",
-                                 "Roadsign"};
+// gchar pgie_classes_str[4][32] = {"Vehicle", "TwoWheeler", "Person",
+//                                  "Roadsign"};
 
 /* osd_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
  * and update params for drawing rectangle, object information etc. */
@@ -46,7 +46,7 @@ osd_sink_pad_buffer_probe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
     GstBuffer *buf = (GstBuffer *)info->data;
     guint num_rects = 0;
     NvDsObjectMeta *obj_meta = NULL;
-    guint vehicle_count = 0;
+    // guint vehicle_count = 0;
     guint person_count = 0;
     NvDsMetaList *l_frame = NULL;
     NvDsMetaList *l_obj = NULL;
@@ -63,11 +63,11 @@ osd_sink_pad_buffer_probe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
              l_obj = l_obj->next)
         {
             obj_meta = (NvDsObjectMeta *)(l_obj->data);
-            if (obj_meta->class_id == PGIE_CLASS_ID_VEHICLE)
-            {
-                vehicle_count++;
-                num_rects++;
-            }
+            // if (obj_meta->class_id == PGIE_CLASS_ID_VEHICLE)
+            // {
+            //     vehicle_count++;
+            //     num_rects++;
+            // }
             if (obj_meta->class_id == PGIE_CLASS_ID_PERSON)
             {
                 person_count++;
@@ -77,9 +77,9 @@ osd_sink_pad_buffer_probe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
         display_meta = nvds_acquire_display_meta_from_pool(batch_meta);
         NvOSD_TextParams *txt_params = &display_meta->text_params[0];
         display_meta->num_labels = 1;
-        txt_params->display_text = g_malloc0(MAX_DISPLAY_LEN);
-        offset = snprintf(txt_params->display_text, MAX_DISPLAY_LEN, "Person = %d ", person_count);
-        offset = snprintf(txt_params->display_text + offset, MAX_DISPLAY_LEN, "Vehicle = %d ", vehicle_count);
+        // txt_params->display_text = g_malloc0(MAX_DISPLAY_LEN);
+        // offset = snprintf(txt_params->display_text, MAX_DISPLAY_LEN, "Person = %d ", person_count);
+        // offset = snprintf(txt_params->display_text + offset, MAX_DISPLAY_LEN, "Vehicle = %d ", vehicle_count);
 
         /* Now set the offsets where the string should appear */
         txt_params->x_offset = 10;
@@ -104,8 +104,8 @@ osd_sink_pad_buffer_probe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
     }
 
     g_print("Frame Number = %d Number of objects = %d "
-            "Vehicle Count = %d Person Count = %d\n",
-            frame_number, num_rects, vehicle_count, person_count);
+            "Person Count = %d\n",
+            frame_number, num_rects, person_count);
     frame_number++;
     return GST_PAD_PROBE_OK;
 }

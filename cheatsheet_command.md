@@ -193,3 +193,9 @@ sudo vi /etc/apt/apt.conf.d/proxy.conf
 Acquire::http::Proxy "http://127.0.0.1:7890/";
 Acquire::https::Proxy "http://127.0.0.1:7890/";
 ```
+# linux user
+```
+sudo useradd -m _00 # add user _00
+sudo usermod -aG sudo _00 # add admin to _00
+sudo passwd _00 # change password of _00
+```
