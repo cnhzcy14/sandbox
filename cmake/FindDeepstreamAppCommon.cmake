@@ -3,7 +3,7 @@
 
 find_path(DEEPSTREAM_APP_COMMON_INCLUDE_DIR deepstream_app_version.h
     HINTS 
-    /opt/nvidia/deepstream/deepstream/sources/apps/apps-common/includes
+    /opt/nvidia/deepstream/deepstream-7.0/sources/apps/apps-common/includes
 )
 
 file(GLOB DEEPSTREAM_APP_COMMON_SRCS ${DEEPSTREAM_APP_COMMON_INCLUDE_DIR}/../src/*.c)

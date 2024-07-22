@@ -1,4 +1,4 @@
-```
+```bash
 gst-launch-1.0 v4l2src device=/dev/video0 ! avenc_mpeg4 ! avdec_mpeg4 ! xvimagesink
 
 gst-launch-1.0 -v udpsrc uri=udp://192.168.1.33:5000 ! tsparse ! tsdemux ! h264parse ! avdec_h264 ! videoconvert ! ximagesink sync=false
@@ -45,8 +45,6 @@ gst-launch-1.0 multifilesrc location="%08d.yuv" index=0 caps="video/x-raw,width=
 
 gst-launch-1.0 videotestsrc pattern=ball ! 'video/x-raw,width=1920,height=1080,framerate=1/1' ! queue2 ! nvjpegenc ! multifilesink location=test%04d.jpg sync=true
 
-GST_PLUGIN_PATH=
-
 GST_PLUGIN_PATH=/usr/local/lib/x86_64-linux-gnu gst-launch-1.0  v4l2src device=/dev/video2 ! video/x-raw,width=640,height=480 ! videoconvert ! edgedetect threshold1=10 ! glimagesink
 
 GST_DEBUG="*:3" gst-launch-1.0 videotestsrc ! video/x-raw,width=1920,height=1080,format=RGB,framerate=30/1 ! tee name=t ! queue ! videoconvert ! "video/x-raw,format=NV12,colorimetry=bt709" ! videoconvert ! video/x-raw,format=GRAY8 ! videoconvert ! ximagesink t. ! queue ! videoconvert ! video/x-raw,format=NV12,colorimetry=bt601 ! videoconvert ! video/x-raw,format=GRAY8  ! videoconvert ! ximagesink
@@ -72,4 +70,8 @@ gst-launch-1.0 v4l2src device=/dev/video2 ! video/x-raw,format=GRAY8,width=640,h
 gst-launch-1.0 multifilesrc location="/home/cnhzcy14/work/data/vio/test/image/%08d.png" index=0 caps="image/png,framerate=30/1" ! pngdec ! nvvideoconvert ! m.sink_0 nvstreammux name=m batch-size=1 width=1280 height=960 ! nvof preset-level=2 ! nvofvisual ! nvmultistreamtiler width=1280 height=960 ! nveglglessink
 
 gst-launch-1.0 v4l2src ! video/x-raw,width=640,height=480 ! videoconvert ! nvvideoconvert ! queue ! m.sink_0 nvstreammux name=m batch-size=1 width=640 height=480 batched-push-timeout=40000 live-source=1 nvbuf-memory-type=0 ! nvof preset-level=2 ! nvofvisual ! nveglglessink
+
+gst-launch-1.0 filesrc location=20240410_90_rgb.avi ! queue ! h264parse ! avdec_h264 ! videoconvert ! videorate ! "video/x-raw,framerate=90/1" ! videorate ! "video/x-raw,framerate=1/1" ! queue2 ! pngenc ! multifilesink location=img/%08d.png sync=true
+
+gst-launch-1.0 filesrc location=pedestrians.mp4 ! decodebin ! autovideoconvert ! autovideosink
 ```

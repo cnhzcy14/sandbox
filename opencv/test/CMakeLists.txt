@@ -17,6 +17,17 @@ target_link_libraries   (bg_sub ${OpenCV_LIBS})
 add_executable          (object_detection object_detection.cpp)
 target_link_libraries   (object_detection ${OpenCV_LIBS})
 
+add_executable          (find_obj find_obj.cpp)
+target_link_libraries   (find_obj ${OpenCV_LIBS})
+
+add_executable          (find_obj_queue find_obj_queue.cpp)
+target_link_libraries   (find_obj_queue ${OpenCV_LIBS})
+
+add_executable          (cv_scale cv_scale.cpp)
+target_link_libraries   (cv_scale ${OpenCV_LIBS})
+
+add_executable          (cv_video cv_video.cpp)
+target_link_libraries   (cv_video ${OpenCV_LIBS})
 
 install(
     TARGETS 

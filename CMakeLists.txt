@@ -16,6 +16,7 @@ check_language(CUDA)
 if(CMAKE_CUDA_COMPILER)
   enable_language(CUDA)
   include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+  cuda_select_nvcc_arch_flags(ARCH_FLAGS)
   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
 endif()
 find_package(OpenCL QUIET)
@@ -186,12 +187,12 @@ add_subdirectory 		(drm/drm-howto)
 # add_subdirectory 		(msgpack)
 
 # VPI
-# add_subdirectory 		(vpi/samples)
+add_subdirectory 		(vpi/samples)
 
 # deepstream
 add_subdirectory 		(deepstream/deepstream-test1)
-add_subdirectory 		(deepstream/deepstream-app)
-add_subdirectory 		(deepstream/nvdsinfer_custom_impl_Yolo)
+# add_subdirectory 		(deepstream/deepstream-app)
+# add_subdirectory 		(deepstream/nvdsinfer_custom_impl_Yolo)
 
 
 message(STATUS)
@@ -220,6 +221,7 @@ message(STATUS "  Threads:              ${Threads_FOUND}"                       
 message(STATUS "  OpenGL:               ${OpenGL_FOUND}"                                )
 message(STATUS "  MATH_LIBRARY:         ${MATH_LIBRARY}"                                )
 message(STATUS "  CUDA:                 ${CUDA_FOUND}"                                  )
+message(STATUS "  CUDA:                 ${ARCH_FLAGS}"                                  )
 message(STATUS "  OpenCL:               ${OpenCL_FOUND}"                                )
 message(STATUS "  TensorRT:             ${TensorRT_FOUND}"                              )
 message(STATUS "  DeepstreamAppCommon:  ${DeepstreamAppCommon_FOUND}"                   )
