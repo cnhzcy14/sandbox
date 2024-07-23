@@ -7,5 +7,8 @@ target_link_libraries 	( thread_safe_test  OpenMP::OpenMP_C )
 add_executable		( vec_add vec_add.c  )
 target_link_libraries 	( vec_add  OpenMP::OpenMP_C )
 
+add_executable		( thread_pool_test thread_pool_test.cpp  )
+target_link_libraries 	( thread_pool_test  OpenMP::OpenMP_CXX )
+
 install(TARGETS omp_test thread_safe_test vec_add
   RUNTIME DESTINATION bin)
