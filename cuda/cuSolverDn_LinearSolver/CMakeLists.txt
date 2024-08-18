@@ -5,7 +5,7 @@ set_target_properties	( triangulation_cu PROPERTIES CUDA_SEPARABLE_COMPILATION O
 set_target_properties	( triangulation_cu PROPERTIES CUDA_ARCHITECTURES "86" )
 
 add_executable			( batchQR_example batchQR_example.cpp )
-target_link_libraries 	( batchQR_example ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES}  ${CUDA_cusparse_LIBRARY} cuda cublas cusolver triangulation_cu)
+target_link_libraries 	( batchQR_example cuda cublas cusolver triangulation_cu)
 set_target_properties	( batchQR_example PROPERTIES CUDA_ARCHITECTURES "86" )
 
 # add_executable			( cuSolverDn_LinearSolver cuSolverDn_LinearSolver.cpp mmio_wrapper.cpp mmio.c )
