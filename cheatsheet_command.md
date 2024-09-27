@@ -75,6 +75,11 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE -D WITH_OPENGL=ON -D WITH_OPENMP=ON -D OPENCV_
 cmake -D CMAKE_BUILD_TYPE=RELEASE -D WITH_OPENCL=ON -D WITH_QT=ON -D WITH_OPENGL=ON -D WITH_OPENMP=ON -D WITH_GSTREAMER=ON -D OPENCV_ENABLE_NONFREE=ON -D WITH_IPP=ON -D WITH_CUDA=ON -D WITH_CUDNN=ON -D OPENCV_DNN_CUDA=ON -D WITH_CUFFT=ON -D ENABLE_FAST_MATH=1 -D CUDA_FAST_MATH=1 -D WITH_CUBLAS=1 -D CUDA_ARCH_BIN=3.0 -D BUILD_opencv_python2=OFF -D BUILD_opencv_python3=OFF -D OPENCV_GENERATE_PKGCONFIG=ON -D OPENCV_EXTRA_MODULES_PATH=/home/cnhzcy14/work/project/opencv_contrib/modules -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_EXAMPLES=OFF -D BUILD_opencv_alphamat=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dnn_superres=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_freetype=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hdf=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_intensity_transform=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_optflow=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_rapid=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_superres=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_text=OFF -D BUILD_opencv_tracking=OFF -D BUILD_opencv_videostab=OFF -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_ximgproc=OFF ..
 ```
 
+## ort runtime compile
+```bash
+./build.sh --cudnn_home /usr/lib/x86_64-linux-gnu --cuda_home /usr/local/cuda --use_tensorrt --tensorrt_home /usr/src/tensorrt --config Release
+```
+
 ## bash
 
 ```bash
