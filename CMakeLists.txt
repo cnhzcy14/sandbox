@@ -165,6 +165,7 @@ add_subdirectory 		(cuda/cuSolverDn_LinearSolver)
 # cpp
 add_subdirectory 		(cpp/test)
 add_subdirectory 		(cpp/threads_affinity)
+add_subdirectory 		(cpp/fixed_point)
 
 # c
 add_subdirectory 		(c/test)

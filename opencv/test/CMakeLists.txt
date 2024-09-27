@@ -2,6 +2,9 @@ if(OpenCV_FOUND)
 add_executable          (cv_test cv_test.cpp)
 target_link_libraries   (cv_test ${OpenCV_LIBS})
 
+add_executable          (cv_test_ppm cv_test_ppm.cpp)
+target_link_libraries   (cv_test_ppm ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+
 # add_executable		( cv_para_test cv_para_test.cpp)
 # target_link_libraries 	( cv_para_test ${LIBS} )
 
