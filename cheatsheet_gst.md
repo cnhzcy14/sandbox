@@ -1,11 +1,25 @@
+## udp
+
+### rtp
+```bash
+# device (host address is not the device address, but the client address):
+gst-launch-1.0 videotestsrc pattern=ball ! video/x-raw,width=640,height=360 ! openh264enc ! rtph264pay ! udpsink host=172.16.254.39 port=5000
+
+# client
+gst-launch-1.0 udpsrc uri=udp://172.16.254.39:5000 ! application/x-rtp, encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! openh264dec ! xvimagesink sync=false
+```
+
+### ts
+```bash
+# device:
+gst-launch-1.0 videotestsrc pattern=ball ! video/x-raw,width=640,height=360 ! openh264enc ! mpegtsmux ! udpsink host=192.168.1.16 port=5000
+
+# client:
+gst-launch-1.0 udpsrc uri=udp://192.168.1.16:5000 ! tsparse ! tsdemux ! h264parse ! openh264dec ! xvimagesink sync=false
+```
+
 ```bash
 gst-launch-1.0 v4l2src device=/dev/video0 ! avenc_mpeg4 ! avdec_mpeg4 ! xvimagesink
-
-gst-launch-1.0 -v udpsrc uri=udp://192.168.1.33:5000 ! tsparse ! tsdemux ! h264parse ! avdec_h264 ! videoconvert ! ximagesink sync=false
-
-gst-launch-1.0 -v udpsrc uri=udp://192.168.1.33:5000 ! application/x-rtp, encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! ximagesink sync=false
-
-gst-launch-1.0 -v udpsrc address=192.168.1.101 port=5000 caps='application/x-rtp, encoding-name=(string)H264, payload=(int)96' ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink sync=false
 
 gst-launch-1.0 -v rtspsrc location='rtsp://admin:admin@192.168.1.108/cam/realmonitor?channel=1&subtype=0' ! decodebin ! videoconvert ! ximagesink sync=false
 
@@ -13,21 +27,13 @@ gst-launch-1.0 -v rtspsrc location='rtsp://127.0.0.1:8554/test' ! decodebin ! vi
 
 gst-launch-1.0 -v rtspsrc location='rtsp://admin:admin@192.168.1.108/cam/realmonitor?channel=1&subtype=0' ! decodebin ! video/x-raw,format=I420 ! glimagesink sync=false
 
-gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw,format=GRAY8,width=1024,height=1024 ! videoconvert ! omxh264enc ! mpegtsmux ! udpsink host=192.168.1.33 port=5000
-
-gst-launch-1.0 v4l2src device=/dev/video1 ! video/x-raw,format=GRAY8,width=1024,height=1024 ! videoconvert ! nvvidconv left=0 right=1024 top=0 bottom=512 ! 'video/x-raw(memory:NVMM),width=1024,height=512' ! omxh264enc ! mpegtsmux ! udpsink host=192.168.1.33 port=5000
-
-gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw,format=GRAY8,width=1024,height=1024 m.sink_0 v4l2src device=/dev/video1 ! video/x-raw,format=GRAY8,width=1024,height=1024 m.sink_1 compositor name=m sink_1::xpos=160 ! video/x-raw,width=2048,height=1024 ! nvvidconv ! omxh264enc ! mpegtsmux ! udpsink host=192.168.1.33 port=5000
-
-gst-launch-1.0 videotestsrc ! video/x-raw,width=1280,height=720 ! videoconvert ! x264enc ! mpegtsmux ! udpsink host=192.168.1.101 port=5000
-
 gst-launch-1.0 -v ximagesrc use-damage=0 ! nvvidconv ! 'video/x-raw(memory:NVMM),alignment=(string)au,format=(string)I420,framerate=(fraction)25/1,pixel-aspect-ratio=(fraction)1/1' ! omxh264enc !  'video/x-h264,stream-format=(string)byte-stream' ! h264parse ! matroskamux ! filesink location=screen.mkv
 
 gst-launch-1.0 rtspsrc location='rtsp://192.168.1.24:8554/test' ! rtph264depay ! h264parse ! avdec_h264 ! glimagesink sync=false
 
 gst-launch-1.0 rtspsrc latency=10 location='rtsp://192.168.1.24:8558/stereo' ! rtph264depay ! h264parse ! avdec_h264 ! glimagesink sync=false
 
-gst-launch-1.0 videotestsrc  ! 'video/x-raw,width=640,height=480,framerate=30/1,format=I420' ! x264enc ! rtph264pay ! rtph264depay ! avdec_h264 ! glimagesink
+gst-launch-1.0 videotestsrc  ! 'video/x-raw,width=640,height=480,framerate=30/1,format=I420' ! openh264enc ! rtph264pay ! rtph264depay ! avdec_h264 ! glimagesink
 
 gst-launch-1.0 nvcamerasrc num-buffers=150 ! tee name=t t. ! queue ! omxh264enc ! filesink location=a.h264 t. ! queue ! nvtee ! nvoverlaysink
 
