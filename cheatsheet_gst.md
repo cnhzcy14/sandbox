@@ -1,12 +1,17 @@
-## udp
+## UDP
 
 ### rtp
 ```bash
 # device (host address is not the device address, but the client address):
-gst-launch-1.0 videotestsrc pattern=ball ! video/x-raw,width=640,height=360 ! openh264enc ! rtph264pay ! udpsink host=172.16.254.39 port=5000
+gst-launch-1.0 videotestsrc pattern=ball ! video/x-raw,width=640,height=360 ! openh264enc ! rtph264pay pt=96 ! udpsink host=172.16.254.39 port=5000
 
 # client
 gst-launch-1.0 udpsrc uri=udp://172.16.254.39:5000 ! application/x-rtp, encoding-name=H264,payload=96 ! rtph264depay ! h264parse ! openh264dec ! xvimagesink sync=false
+```
+```bash
+# jetson orin device
+gst-launch-1.0 nvv4l2camerasrc device=/dev/video0 ! 'video/x-raw(memory:NVMM),format=UYVY,width=1920,hight=1536,framerate=30/1' ! nvvidconv ! queue ! nvv4l2h264enc insert-sps-pps=true ! rtph264pay pt=96 ! udpsink host=192.168.2.31 port=5000
+
 ```
 
 ### ts
@@ -17,6 +22,10 @@ gst-launch-1.0 videotestsrc pattern=ball ! video/x-raw,width=640,height=360 ! op
 # client:
 gst-launch-1.0 udpsrc uri=udp://192.168.1.16:5000 ! tsparse ! tsdemux ! h264parse ! openh264dec ! xvimagesink sync=false
 ```
+
+### image record
+
+
 
 ```bash
 gst-launch-1.0 v4l2src device=/dev/video0 ! avenc_mpeg4 ! avdec_mpeg4 ! xvimagesink
