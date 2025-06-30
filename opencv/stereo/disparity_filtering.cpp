@@ -26,7 +26,9 @@ const String keys =
     "{no-downscale   |                  | force stereo matching on full-sized views to improve quality      }"
     "{dst_conf_path  |None              | optional path to save the confidence map used in filtering        }"
     "{vis_mult       |1.0               | coefficient used to scale disparity map visualizations            }"
+    "{mode           |2                 | sgbm mode                                                         }"
     "{max_disparity  |160               | parameter of stereo matching                                      }"
+    "{min_disparity  |0                 | parameter of stereo matching                                      }"
     "{window_size    |-1                | parameter of stereo matching                                      }"
     "{wls_lambda     |8000.0            | parameter of wls post-filtering                                   }"
     "{wls_sigma      |1.5               | parameter of wls post-filtering                                   }"
@@ -56,7 +58,9 @@ int main(int argc, char **argv)
     String filter = parser.get<String>("filter");
     bool no_display = parser.has("no-display");
     bool no_downscale = parser.has("no-downscale");
+    int mode = parser.get<int>("mode");
     int max_disp = parser.get<int>("max_disparity");
+    int min_disp = parser.get<int>("min_disparity");
     double lambda = parser.get<double>("wls_lambda");
     double sigma = parser.get<double>("wls_sigma");
     double fbs_spatial = parser.get<double>("fbs_spatial");
@@ -71,7 +75,7 @@ int main(int argc, char **argv)
     else
     {
         if (algo == "sgbm")
-            wsize = 3; // default window size for SGBM
+            wsize = 5; // default window size for SGBM
         else if (!no_downscale && algo == "bm" && filter == "wls_conf")
             wsize = 7; // default window size for BM on downscaled views (downscaling is performed only for wls_conf)
         else
@@ -136,6 +140,7 @@ int main(int argc, char **argv)
 
     if (filter == "wls_conf") // filtering with confidence (significantly better quality than wls_no_conf)
     {
+        cout << min_disp << " ----==== " << max_disp << endl;
         if (!no_downscale)
         {
             // downscale the views to speed-up the matching stage, as we will need to compute both left
@@ -172,11 +177,13 @@ int main(int argc, char **argv)
         }
         else if (algo == "sgbm")
         {
-            Ptr<StereoSGBM> left_matcher = StereoSGBM::create(0, max_disp, wsize);
+            cout << wsize << " ----==== " << mode << endl;
+            Ptr<StereoSGBM> left_matcher = StereoSGBM::create(min_disp, max_disp, wsize);
             left_matcher->setP1(24 * wsize * wsize);
             left_matcher->setP2(96 * wsize * wsize);
             left_matcher->setPreFilterCap(63);
-            left_matcher->setMode(StereoSGBM::MODE_SGBM_3WAY);
+            //0.MODE_SGBM采用5个方向，1.MODE_HH采用8个方向，2.MODE_SGBM_3WAY采用3个方向, 3.MODE_HH48个方向加速版本
+            left_matcher->setMode(mode);
             wls_filter = createDisparityWLSFilter(left_matcher);
             Ptr<StereoMatcher> right_matcher = createRightMatcher(left_matcher);
 
