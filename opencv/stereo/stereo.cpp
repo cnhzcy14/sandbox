@@ -1,4 +1,6 @@
-#include "opencv2/calib3d.hpp"
+#include <opencv2/opencv.hpp>
+#include <iostream>
+
 //测试opencv的stereo match耗时
 void test_opencv_stereo_mathch()
 {
@@ -86,4 +88,10 @@ void test_opencv_stereo_mathch()
         cv::imwrite("img/disp_hh.png", disp);
     }
 
+}
+
+int main(int argc, char **argv)
+{
+    test_opencv_stereo_mathch();
+    return 0;
 }
