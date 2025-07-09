@@ -1,0 +1,11 @@
+if(OpenCV_FOUND)
+message(STATUS "  GStreamer:            ${GSTREAMER_FOUND}"                                )
+# add_subdirectory 		(controller_test)
+# add_subdirectory 		(gst_test)
+# add_subdirectory 		(gobject_test)
+# add_subdirectory 		(gobject_tutorial/05_public_methods)
+# add_subdirectory 		(gobject_tutorial/06_inheritence)
+# add_subdirectory 		(gobject_tutorial/07_virtual_methods)
+add_subdirectory 		(tutorial)
+endif()
+
