@@ -42,6 +42,7 @@ if(UNIX AND NOT APPLE)
   pkg_check_modules(GSTREAMER QUIET IMPORTED_TARGET gstreamer-1.0)
   pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
   pkg_check_modules(GST_VIDEO QUIET IMPORTED_TARGET gstreamer-video-1.0)
+  pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
 endif()
 
 find_package(OpenCV QUIET)
@@ -87,8 +88,7 @@ find_package(ZLIB QUIET)
 # pkg_check_modules(GLOG QUIET IMPORTED_TARGET libglog)
 # set(LIBS ${LIBS} PkgConfig::GLOG)
 
-# find_package(Ceres QUIET)
-# set(LIBS ${LIBS} ceres )
+find_package(Ceres QUIET)
 
 
 # jsoncpp
@@ -96,7 +96,7 @@ find_package(ZLIB QUIET)
 # set(LIBS ${LIBS} PkgConfig::JSONCPP)
 
 # 0mq
-# pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
+
 # set(LIBS ${LIBS} PkgConfig::ZMQ)
 
 # add_subdirectory 		(opencl/test)
@@ -122,20 +122,9 @@ find_package(ZLIB QUIET)
 add_subdirectory 		(opencv)
 add_subdirectory 		(apriltag)
 add_subdirectory 		(openmp)
-
-
-# # blas, lapack
 # add_subdirectory 		(blas/blas_test)
-
-# # ceres
-# add_subdirectory 		(ceres/examples)
-
-# 0mq
-# add_subdirectory 		(zmq_code/pair)
-# add_subdirectory 		(zmq_code/publisher0)
-# add_subdirectory 		(zmq_code/subscriber0)
-# add_subdirectory 		(zmq_code/json_msg)
-
+# add_subdirectory 		(ceres)
+# add_subdirectory 		(zmq)
 add_subdirectory 		(eigen)
 add_subdirectory 		(gstreamer)
 
