@@ -1,4 +1,4 @@
-if(OpenCV_FOUND)
+if(GSTREAMER_FOUND)
 message(STATUS "  GStreamer:            ${GSTREAMER_FOUND}"                                )
 # add_subdirectory 		(controller_test)
 # add_subdirectory 		(gst_test)
