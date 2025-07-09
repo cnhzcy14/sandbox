@@ -29,36 +29,39 @@ message(STATUS "  Threads:              ${Threads_FOUND}"                       
 #   # cuda_select_nvcc_arch_flags(ARCH_FLAGS)
 #   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
 # endif()
-# find_package(OpenCL QUIET)
+
 
 if(UNIX AND NOT APPLE)
-  # find_package(X11 QUIET)
+  find_package(X11 QUIET)
   find_package(PkgConfig QUIET) # for some lib without cmakeconfig
-  # pkg_check_modules(DRM QUIET IMPORTED_TARGET libdrm)
-  # pkg_check_modules(V4L2 QUIET IMPORTED_TARGET libv4l2)
-  # pkg_check_modules(GBM QUIET IMPORTED_TARGET gbm)
+  pkg_check_modules(DRM QUIET IMPORTED_TARGET libdrm)
+  pkg_check_modules(V4L2 QUIET IMPORTED_TARGET libv4l2)
+  pkg_check_modules(GBM QUIET IMPORTED_TARGET gbm)
   pkg_check_modules(GLIB QUIET IMPORTED_TARGET glib-2.0)
   pkg_check_modules(GLIB_JSON QUIET IMPORTED_TARGET json-glib-1.0)
   pkg_check_modules(GSTREAMER QUIET IMPORTED_TARGET gstreamer-1.0)
   pkg_check_modules(GST_RTSP QUIET IMPORTED_TARGET gstreamer-rtsp-server-1.0)
   pkg_check_modules(GST_VIDEO QUIET IMPORTED_TARGET gstreamer-video-1.0)
   pkg_check_modules(ZMQ QUIET IMPORTED_TARGET libzmq)
+  pkg_check_modules(JSONCPP QUIET IMPORTED_TARGET jsoncpp)
+  pkg_check_modules(GLOG QUIET IMPORTED_TARGET libglog)
+  pkg_check_modules(BLAS QUIET IMPORTED_TARGET blas64)
+  pkg_check_modules(LAPACK QUIET IMPORTED_TARGET lapack64)
 endif()
 
+# find_package(OpenCL QUIET)
 find_package(OpenCV QUIET)
 find_package(yaml-cpp QUIET)
-
 find_package(Eigen3 QUIET NO_MODULE)
 find_package(apriltag QUIET)
-# find_package(vpi QUIET)
-
-# find_package(OpenGL QUIET)
+find_package(vpi QUIET)
+find_package(OpenGL QUIET)
 find_library(MATH_LIBRARY m) # special for finding libm (math.h)
-# find_package(TensorRT QUIET)
-# find_package(DeepstreamAppCommon QUIET)
-# find_package(NVDS QUIET)
+find_package(TensorRT QUIET)
+find_package(DeepstreamAppCommon QUIET)
+find_package(NVDS QUIET)
 find_package(ZLIB QUIET)
-
+find_package(Ceres QUIET)
 
 
 
@@ -78,42 +81,13 @@ find_package(ZLIB QUIET)
 #     message(STATUS "OPENVX_LIBRARIES: \t<empty>")
 # endif()
 
-# pkg_check_modules(BLAS QUIET IMPORTED_TARGET blas64)
 # set(LIBS ${LIBS} PkgConfig::BLAS)
-
-# pkg_check_modules(LAPACK QUIET IMPORTED_TARGET lapack64)
 # set(LIBS ${LIBS} PkgConfig::LAPACK)
-
-
-# pkg_check_modules(GLOG QUIET IMPORTED_TARGET libglog)
 # set(LIBS ${LIBS} PkgConfig::GLOG)
-
-find_package(Ceres QUIET)
-
-
-# jsoncpp
-# pkg_check_modules(JSONCPP QUIET IMPORTED_TARGET jsoncpp)
 # set(LIBS ${LIBS} PkgConfig::JSONCPP)
-
-# 0mq
-
 # set(LIBS ${LIBS} PkgConfig::ZMQ)
 
-# add_subdirectory 		(opencl/test)
-# add_subdirectory 		(opencl/Exercises/Exercise01/C)
-# add_subdirectory 		(opencl/Solutions/Exercise04/C)
-# add_subdirectory 		(opencl/Solutions/Exercise05/C)
-# add_subdirectory 		(opencl/Solutions/Exercise08/C)
-# add_subdirectory 		(opencl/Solutions/Exercise09/C)
-# add_subdirectory 		(opencl/Ch11/bsort)
-# add_subdirectory 		(opencl/Ch11/string_search)
-# # add_subdirectory 		(opencl/Ch7/atomic)
-# add_subdirectory 		(opencl/Ch14/fft)
-# add_subdirectory 		(opencl/android-opencl-blur-release)
-# add_subdirectory 		(opencl/matmul)
-# add_subdirectory 		(opencl/marching_squares)
-# add_subdirectory 		(opencl/local_thresh)
-# add_subdirectory 		(opencl/OpenCL-Textbook-Code)
+add_subdirectory 		(opencl)
 
 # openvx
 # add_subdirectory 		(openvx/test)
@@ -127,13 +101,7 @@ add_subdirectory 		(openmp)
 # add_subdirectory 		(zmq)
 add_subdirectory 		(eigen)
 add_subdirectory 		(gstreamer)
-
-
-# add_subdirectory 		(cuda/test)
-# add_subdirectory 		(cuda/ratio_test)
-# add_subdirectory 		(cuda/batchCUBLAS)
-# add_subdirectory 		(cuda/cuSolverDn_LinearSolver)
-
+add_subdirectory 		(cuda)
 add_subdirectory 		(cpp)
 add_subdirectory 		(c)
 
@@ -154,14 +122,8 @@ add_subdirectory 		(c)
 # add_subdirectory 		(json)
 # add_subdirectory 		(msgpack)
 
-# VPI
-# add_subdirectory 		(vpi/samples)
-
-# deepstream
-# add_subdirectory 		(deepstream/deepstream-test1)
-# add_subdirectory 		(deepstream/deepstream-app)
-# add_subdirectory 		(deepstream/nvdsinfer_custom_impl_Yolo)
-
+add_subdirectory 		(vpi)
+add_subdirectory 		(deepstream)
 add_subdirectory 		(zlib)
 
 
@@ -174,15 +136,9 @@ message(STATUS "  GST_RTSP:             ${GST_RTSP_FOUND}"                      
 message(STATUS "  GST_VIDEO:            ${GST_VIDEO_FOUND}"                             )
 message(STATUS "  YAML_CPP:             ${YAML_CPP_LIBRARIES}"                          )
 message(STATUS "  X11:                  ${X11_FOUND}"                                   )
-message(STATUS "  vpi:                  ${vpi_FOUND}"                                   )
-
 message(STATUS "  OpenGL:               ${OpenGL_FOUND}"                                )
 message(STATUS "  MATH_LIBRARY:         ${MATH_LIBRARY}"                                )
-message(STATUS "  CUDA:                 ${CUDA_FOUND}"                                  )
-message(STATUS "  CUDA:                 ${ARCH_FLAGS}"                                  )
-message(STATUS "  OpenCL:               ${OpenCL_FOUND}"                                )
 message(STATUS "  TensorRT:             ${TensorRT_FOUND}"                              )
-message(STATUS "  DeepstreamAppCommon:  ${DeepstreamAppCommon_FOUND}"                   )
 message(STATUS "  NVDS:                 ${NVDS_FOUND}"                                  )
 message(STATUS "  ------"                                                               )
 message(STATUS "  C/C++ Standard:       ${CMAKE_C_STANDARD}/${CMAKE_CXX_STANDARD}"      )
