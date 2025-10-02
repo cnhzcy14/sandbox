@@ -1,3 +1,18 @@
+## tar
+```
+tar -cvf xxx.tar /path/to/files/
+tar -xvf xxx.tar
+
+tar -cvJf xxx.tar.xz /path/to/files/
+tar -xvJf xxx.tar.xz
+
+tar -cvjf xxx.tar.bz2 /path/to/files/
+tar -xvjf xxx.tar.bz2
+
+tar -cvzf xxx.tar.gz /path/to/files/
+tar -xvzf xxx.tar.gz
+```
+
 ## nvprof
 
 ```bash

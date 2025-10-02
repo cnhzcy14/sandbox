@@ -1,5 +1,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+from conan.tools.system.package_manager import Apt
+import os
 
 class CompressorRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -7,10 +9,17 @@ class CompressorRecipe(ConanFile):
 
     def requirements(self):
         self.requires("zlib/1.3.1")
+        # self.requires("openssl/3.5.0")
         # self.requires("onnxruntime/1.14.1")
         # self.requires("openjpeg/2.3.1")
         self.requires("opencv/4.5.3")
-       
+
+    def system_requirements(self):
+        if self.settings.os == "Linux":
+            apt = Apt(self)
+            # 检查并安装系统依赖
+            apt.install(["libssl-dev"])
+     
     def layout(self):
         cmake_layout(self)
 

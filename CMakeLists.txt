@@ -62,7 +62,7 @@ find_package(DeepstreamAppCommon QUIET)
 find_package(NVDS QUIET)
 find_package(ZLIB QUIET)
 find_package(Ceres QUIET)
-
+find_package(OpenSSL QUIET)
 
 
 # link_directories(/usr/lib/aarch64-linux-gnu)
@@ -125,6 +125,7 @@ add_subdirectory 		(c)
 add_subdirectory 		(vpi)
 add_subdirectory 		(deepstream)
 add_subdirectory 		(zlib)
+add_subdirectory 		(openssl)
 
 
 message(STATUS "  DRM:                  ${DRM_FOUND}"                                   )
@@ -142,6 +143,7 @@ message(STATUS "  TensorRT:             ${TensorRT_FOUND}"                      
 message(STATUS "  NVDS:                 ${NVDS_FOUND}"                                  )
 message(STATUS "  ------"                                                               )
 message(STATUS "  C/C++ Standard:       ${CMAKE_C_STANDARD}/${CMAKE_CXX_STANDARD}"      )
+message(STATUS "  C/C++ Compiler:       ${CMAKE_CXX_COMPILER_VERSION}"                  )
 message(STATUS "  CMake Version:        ${CMAKE_VERSION}"                               )
 message(STATUS "  Default Install:      ${CMAKE_INSTALL_PREFIX}"                        )
 message(STATUS "======================================================================" )
