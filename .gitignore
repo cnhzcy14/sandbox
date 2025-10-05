@@ -1,8 +1,8 @@
 # ignore dot files/directories
-.*
 !.gitignore
 .vscode
 build*
 bin
 lib
 CMakeUserPresets.json
+CMakePresets.json
