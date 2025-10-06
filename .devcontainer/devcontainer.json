@@ -12,11 +12,11 @@
 		"all",
 		"--net",
 		"host",
-		"-it"
+		"-it",
 		// "-h",
 		// "star-X11DAi-N-ubuntu12_cross"
-		// "--name",
-		// "${localEnv:USER}_${localWorkspaceFolderBasename}"
+		"--name",
+		"${localEnv:USER}_${localWorkspaceFolderBasename}"
 	],
 	"mounts": [
 		"source=${localEnv:HOME},target=${localEnv:HOME},type=bind,consistency=cached"
