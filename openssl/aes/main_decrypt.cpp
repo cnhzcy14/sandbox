@@ -82,57 +82,29 @@ bool extractKey(
         return false;
     }
 
-    size_t pos = 0;
+    // 计算索引
+    size_t remaining_start = 20; // keyPart1(4) + nonce(12) + keyPart2(4)
+    size_t total_remaining = data.size() - remaining_start;
+    size_t key_part4_start = data.size() - 4;
+    size_t ciphertext_len = total_remaining - 8; // 排除keyPart3(4)和keyPart4(4)
+    size_t mid_pos = ciphertext_len / 2;
+    size_t key_part3_start = remaining_start + mid_pos;
 
-    // 提取密钥段1 (前4字节)
-    std::vector<unsigned char> keyPart1(data.begin() + pos, data.begin() + pos + 4);
-    pos += 4;
+    // 提取nonce (4-15)
+    nonce.assign(data.begin() + 4, data.begin() + 16);
 
-    // 提取 nonce (12字节)
-    nonce.assign(data.begin() + pos, data.begin() + pos + 12);
-    pos += 12;
+    // 重组密钥 (16字节)
+    key.resize(16);
+    std::copy_n(data.begin(), 4, key.begin());           // keyPart1: 0-3
+    std::copy_n(data.begin() + 16, 4, key.begin() + 4);  // keyPart2: 16-19
+    std::copy_n(data.begin() + key_part3_start, 4, key.begin() + 8); // keyPart3
+    std::copy_n(data.begin() + key_part4_start, 4, key.begin() + 12); // keyPart4
 
-    // 提取密钥段2 (4字节)
-    std::vector<unsigned char> keyPart2(data.begin() + pos, data.begin() + pos + 4);
-    pos += 4;
-
-    // 剩余数据包含: 密文前半段 + 密钥段3 + 密文后半段 + 密钥段4
-    std::vector<unsigned char> remaining(data.begin() + pos, data.end());
-
-    // 提取密钥段4 (最后4字节)
-    std::vector<unsigned char> keyPart4(remaining.end() - 4, remaining.end());
-    remaining.erase(remaining.end() - 4, remaining.end());
-
-    // 计算密文中间位置 (需要减去密钥段3的4字节)
-    size_t ciphertextLen = remaining.size() - 4;
-    size_t midPos = ciphertextLen / 2;
-
-    // 提取密文前半段
-    std::vector<unsigned char> ciphertextFirst(
-        remaining.begin(), remaining.begin() + midPos);
-
-    // 提取密钥段3
-    std::vector<unsigned char> keyPart3(
-        remaining.begin() + midPos, remaining.begin() + midPos + 4);
-
-    // 提取密文后半段
-    std::vector<unsigned char> ciphertextSecond(
-        remaining.begin() + midPos + 4, remaining.end());
-
-    // 重组密钥和密文
-    // 使用固定大小数组和已验证长度的复制操作确保内存安全
-    unsigned char keyBuffer[16];
-    // 使用copy_n并显式使用已验证的密钥段大小
-    std::copy_n(keyPart1.data(), keyPart1.size(), keyBuffer);
-    std::copy_n(keyPart2.data(), keyPart2.size(), keyBuffer + 4);
-    std::copy_n(keyPart3.data(), keyPart3.size(), keyBuffer + 8);
-    std::copy_n(keyPart4.data(), keyPart4.size(), keyBuffer + 12);
-    // 转换回vector
-    key.assign(keyBuffer, keyBuffer + 16);
-
-    ciphertext.clear();
-    ciphertext.insert(ciphertext.end(), ciphertextFirst.begin(), ciphertextFirst.end());
-    ciphertext.insert(ciphertext.end(), ciphertextSecond.begin(), ciphertextSecond.end());
+    // 重组密文
+    ciphertext.resize(ciphertext_len);
+    size_t first_part_len = mid_pos;
+    std::copy_n(data.begin() + remaining_start, first_part_len, ciphertext.begin());
+    std::copy_n(data.begin() + key_part3_start + 4, ciphertext_len - first_part_len, ciphertext.begin() + first_part_len);
 
     return true;
 }
