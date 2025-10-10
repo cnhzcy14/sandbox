@@ -11,11 +11,11 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/crypto.h>
+#include <algorithm>
 
 using namespace std;
 
 #define MODEL_HEADER_MAGIC 0x20220312
-
 
 const uint8_t encrypt_key_aes[16] = {
     0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -47,8 +47,6 @@ typedef struct MODEL_HEADER_T
     uint8_t sum;
 } MODEL_HEADER;
 
-
-
 void printModelHead(const MODEL_HEADER &head)
 {
     cout << "  magic: 0x" << hex << head.magic << dec << endl;
@@ -70,10 +68,147 @@ void printModelHead(const MODEL_HEADER &head)
     cout << "  ======================================================= " << endl;
 }
 
+/**
+ * 从文件中提取密钥、nonce 和密文
+ */
+bool extractKey(
+    const std::vector<unsigned char> &data,
+    std::vector<unsigned char> &key,
+    std::vector<unsigned char> &nonce,
+    std::vector<unsigned char> &ciphertext)
+{
+    if (data.size() < 32)
+    { // 最小: 16(key) + 12(nonce) + 4(最小密文+tag)
+        return false;
+    }
+
+    size_t pos = 0;
+
+    // 提取密钥段1 (前4字节)
+    std::vector<unsigned char> keyPart1(data.begin() + pos, data.begin() + pos + 4);
+    pos += 4;
+
+    // 提取 nonce (12字节)
+    nonce.assign(data.begin() + pos, data.begin() + pos + 12);
+    pos += 12;
+
+    // 提取密钥段2 (4字节)
+    std::vector<unsigned char> keyPart2(data.begin() + pos, data.begin() + pos + 4);
+    pos += 4;
+
+    // 剩余数据包含: 密文前半段 + 密钥段3 + 密文后半段 + 密钥段4
+    std::vector<unsigned char> remaining(data.begin() + pos, data.end());
+
+    // 提取密钥段4 (最后4字节)
+    std::vector<unsigned char> keyPart4(remaining.end() - 4, remaining.end());
+    remaining.erase(remaining.end() - 4, remaining.end());
+
+    // 计算密文中间位置 (需要减去密钥段3的4字节)
+    size_t ciphertextLen = remaining.size() - 4;
+    size_t midPos = ciphertextLen / 2;
+
+    // 提取密文前半段
+    std::vector<unsigned char> ciphertextFirst(
+        remaining.begin(), remaining.begin() + midPos);
+
+    // 提取密钥段3
+    std::vector<unsigned char> keyPart3(
+        remaining.begin() + midPos, remaining.begin() + midPos + 4);
+
+    // 提取密文后半段
+    std::vector<unsigned char> ciphertextSecond(
+        remaining.begin() + midPos + 4, remaining.end());
+
+    // 重组密钥和密文
+    // 使用固定大小数组和已验证长度的复制操作确保内存安全
+    unsigned char keyBuffer[16];
+    // 使用copy_n并显式使用已验证的密钥段大小
+    std::copy_n(keyPart1.data(), keyPart1.size(), keyBuffer);
+    std::copy_n(keyPart2.data(), keyPart2.size(), keyBuffer + 4);
+    std::copy_n(keyPart3.data(), keyPart3.size(), keyBuffer + 8);
+    std::copy_n(keyPart4.data(), keyPart4.size(), keyBuffer + 12);
+    // 转换回vector
+    key.assign(keyBuffer, keyBuffer + 16);
+
+    ciphertext.clear();
+    ciphertext.insert(ciphertext.end(), ciphertextFirst.begin(), ciphertextFirst.end());
+    ciphertext.insert(ciphertext.end(), ciphertextSecond.begin(), ciphertextSecond.end());
+
+    return true;
+}
 
 
+/**
+ * AES-128-GCM 解密
+ */
+bool aes_gcm_decrypt(
+    const std::vector<unsigned char> &ciphertext,
+    std::vector<unsigned char> &plaintext,
+    const std::vector<unsigned char> &key,
+    const std::vector<unsigned char> &nonce)
+{
+    if (ciphertext.size() < 16)
+        return false; // 至少要有认证标签
 
-bool aes_decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext)
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+        return false;
+
+    int len;
+    plaintext.resize(ciphertext.size());
+
+    // 初始化解密操作
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr, nullptr, nullptr) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // 设置 nonce 长度
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, nonce.size(), nullptr) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // 设置密钥和 nonce
+    if (EVP_DecryptInit_ex(ctx, nullptr, nullptr, key.data(), nonce.data()) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // 解密数据 (不包括最后16字节的认证标签)
+    size_t ciphertextLen = ciphertext.size() - 16;
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertextLen) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    int plaintextLen = len;
+
+    // 设置认证标签
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16,
+                            const_cast<unsigned char *>(ciphertext.data() + ciphertextLen)) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // 完成解密并验证标签
+    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    plaintextLen += len;
+
+    plaintext.resize(plaintextLen);
+    EVP_CIPHER_CTX_free(ctx);
+    return true;
+}
+
+bool aes_ecb_decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext)
 {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
@@ -131,7 +266,6 @@ void getFiles(const string &path, vector<string> &files)
     }
 }
 
-
 bool writeDecryptedModelFile(const string &path, const unsigned char *data, size_t data_len)
 {
     FILE *pf = fopen(path.c_str(), "wb");
@@ -144,36 +278,40 @@ bool writeDecryptedModelFile(const string &path, const unsigned char *data, size
     return success;
 }
 
-
-
-bool parseModelHeaders(const vector<string>& files, const string &output_path) {
-    for (const auto& file : files) {
-        FILE* fp = fopen(file.c_str(), "rb");
-        if (!fp) {
+bool parseModelHeadersECB(const vector<string> &files, const string &output_path)
+{
+    for (const auto &file : files)
+    {
+        FILE *fp = fopen(file.c_str(), "rb");
+        if (!fp)
+        {
             printf("Failed to open file: %s\n", file.c_str());
             continue;
         }
-        
+
         MODEL_HEADER header;
         size_t read = fread(&header, sizeof(MODEL_HEADER), 1, fp);
-        if (read != 1) {
+        if (read != 1)
+        {
             printf("Failed to read header from %s\n", file.c_str());
             fclose(fp);
             continue;
         }
 
         printModelHead(header);
-        
-        if (header.magic != MODEL_HEADER_MAGIC) {
+
+        if (header.magic != MODEL_HEADER_MAGIC)
+        {
             printf("Invalid model header magic in %s\n", file.c_str());
             fclose(fp);
             continue;
         }
-        
+
         size_t fsizePad = ((header.len + 15) & ~15); // 对齐到16字节
         vector<unsigned char> fbuff(fsizePad, 0);
 
-        if (fread(fbuff.data(), 1, header.len, fp) != header.len) {
+        if (fread(fbuff.data(), 1, header.len, fp) != header.len)
+        {
             printf("Failed to read model data from %s\n", file.c_str());
             fclose(fp);
             continue;
@@ -181,14 +319,84 @@ bool parseModelHeaders(const vector<string>& files, const string &output_path) {
 
         // 解密数据
         vector<unsigned char> decrypted_data(fsizePad);
-        if (!aes_decrypt(fbuff.data(), fsizePad, decrypted_data.data()))
+        if (!aes_ecb_decrypt(fbuff.data(), fsizePad, decrypted_data.data()))
         {
             printf("Decryption failed for: %s\n", header.model_name);
             continue;
         }
 
         string out_path = output_path + "/" + string((char *)header.model_name) + ".bin";
-        if (!writeDecryptedModelFile(out_path, decrypted_data.data(), header.len)) {
+        if (!writeDecryptedModelFile(out_path, decrypted_data.data(), header.len))
+        {
+            printf("Failed to write decrypted model to %s\n", out_path.c_str());
+            fclose(fp);
+            continue;
+        }
+
+        fclose(fp);
+    }
+    return true;
+}
+
+bool parseModelHeadersGCM(const vector<string> &files, const string &output_path)
+{
+    for (const auto &file : files)
+    {
+        FILE *fp = fopen(file.c_str(), "rb");
+        if (!fp)
+        {
+            printf("Failed to open file: %s\n", file.c_str());
+            continue;
+        }
+
+        MODEL_HEADER header;
+        size_t read = fread(&header, sizeof(MODEL_HEADER), 1, fp);
+        if (read != 1)
+        {
+            printf("Failed to read header from %s\n", file.c_str());
+            fclose(fp);
+            continue;
+        }
+
+        printModelHead(header);
+
+        if (header.magic != MODEL_HEADER_MAGIC)
+        {
+            printf("Invalid model header magic in %s\n", file.c_str());
+            fclose(fp);
+            continue;
+        }
+
+        size_t fsizePad = header.len + 16 + 16 + 12; // 16字节密钥，16字节标签，12字节nonce
+        vector<unsigned char> fbuff(fsizePad, 0);
+
+        if (fread(fbuff.data(), 1, fsizePad, fp) != fsizePad)
+        {
+            printf("Failed to read model data from %s\n", file.c_str());
+            fclose(fp);
+            continue;
+        }
+
+        // 从文件中提取密钥、nonce 和密文
+        std::vector<unsigned char> key, nonce, ciphertext;
+        if (!extractKey(fbuff, key, nonce, ciphertext)) {
+            std::cerr << "✗ 文件格式错误" << std::endl;
+            return false;
+        }
+        
+        // std::cout << "  提取的密钥(hex): " << bytesToHex(key) << std::endl;
+        
+        // 解密数据
+        std::vector<unsigned char> plaintext;
+        if (!aes_gcm_decrypt(ciphertext, plaintext, key, nonce)) {
+            std::cerr << "✗ 解密失败: 密码错误或文件已损坏" << std::endl;
+            return false;
+        }
+        
+        // 写入解密文件
+        string out_path = output_path + "/" + string((char *)header.model_name) + ".bin";
+        if (!writeDecryptedModelFile(out_path, plaintext.data(), header.len))
+        {
             printf("Failed to write decrypted model to %s\n", out_path.c_str());
             fclose(fp);
             continue;
@@ -235,7 +443,8 @@ int main(int argc, char *argv[])
     vector<string> ownname;
 
     getFiles(input_path, files);
-    parseModelHeaders(files, output_path);
+    // parseModelHeadersECB(files, output_path);
+    parseModelHeadersGCM(files, output_path);
 
     printf("Model decryption completed\n");
     return 0;

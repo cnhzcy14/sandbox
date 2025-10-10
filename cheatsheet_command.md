@@ -52,6 +52,14 @@ sudo umount tx1
 sudo mount -t nfs 192.168.1.100:/home/cnhzcy14/work work
 ```
 
+## smb
+```
+sudo mount -t cifs //<nas_ip>/<folder_name> ~/<local_folder_name> -o username=<user_name>,password=<pasasword>,uid=$(id -u),gid=$(id -g)
+gio mount smb://<nas_ip>/<folder_name>
+ln -sT "$XDG_RUNTIME_DIR/gvfs/smb-share:server=<nas_ip>,share=<user_name>" $HOME/nas
+gio mount -u smb://<nas_ip>/<folder_name>
+```
+
 ## power
 
 ```bash
