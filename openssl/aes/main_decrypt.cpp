@@ -180,7 +180,10 @@ bool aes_gcm_decrypt(
     return true;
 }
 
-bool aes_ecb_decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext)
+bool aes_ecb_decrypt(
+    const unsigned char *ciphertext, 
+    int ciphertext_len, 
+    unsigned char *plaintext)
 {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
@@ -339,7 +342,8 @@ bool parseModelHeadersGCM(const vector<string> &files, const string &output_path
             continue;
         }
 
-        size_t fsizePad = header.len + 16 + 16 + 12; // 16字节密钥，16字节标签，12字节nonce
+        size_t fsizePad = header.len; 
+        size_t plaintextLen = header.len - 16 - 16 - 12; // 16字节密钥，16字节标签，12字节nonce
         vector<unsigned char> fbuff(fsizePad, 0);
 
         if (fread(fbuff.data(), 1, fsizePad, fp) != fsizePad)
@@ -367,7 +371,7 @@ bool parseModelHeadersGCM(const vector<string> &files, const string &output_path
         
         // 写入解密文件
         string out_path = output_path + "/" + string((char *)header.model_name) + ".bin";
-        if (!writeDecryptedModelFile(out_path, plaintext.data(), header.len))
+        if (!writeDecryptedModelFile(out_path, plaintext.data(), plaintextLen))
         {
             printf("Failed to write decrypted model to %s\n", out_path.c_str());
             fclose(fp);
