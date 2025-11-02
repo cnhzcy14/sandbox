@@ -1,0 +1,15 @@
+[settings]
+os=Linux
+arch=armv8
+compiler=gcc
+compiler.cppstd=gnu17
+compiler.libcxx=libstdc++11
+compiler.version=10
+build_type=Release
+[buildenv]
+CC=aarch64-linux-gnu-gcc-10
+CXX=aarch64-linux-gnu-g++-10
+LD=aarch64-linux-gnu-ld
+CFLAGS=-O3 -march=armv8.2-a+crypto+crc+fp+simd+dotprod -mtune=cortex-a76.cortex-a55 -ffunction-sections -fdata-sections
+CXXFLAGS=-O3 -march=armv8.2-a+crypto+crc+fp+simd+dotprod -mtune=cortex-a76.cortex-a55 -ffunction-sections -fdata-sections
+LDFLAGS=-Wl,--gc-sections
