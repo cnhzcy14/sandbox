@@ -1,6 +1,6 @@
 {
 	"build": {
-		"dockerfile": "../dockerfile/ubuntu22_gcc",
+		"dockerfile": "../dockerfile/ubuntu20_gcc",
 		"args": {
 			"USERNAME": "${localEnv:USER}"
 		}
@@ -13,14 +13,13 @@
 		"--net",
 		"host",
 		"-it",
-		// "-h",
-		// "star-X11DAi-N-ubuntu12_cross"
 		"--name",
 		"${localEnv:USER}_${localWorkspaceFolderBasename}"
 	],
 	"mounts": [
 		"source=${localEnv:HOME},target=${localEnv:HOME},type=bind,consistency=cached"
 	],
+	"workspaceFolder": "${localEnv:HOME}/work/project/${localWorkspaceFolderBasename}",
 	"customizations": {
 		"vscode": {
 			"extensions": [
