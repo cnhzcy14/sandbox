@@ -4,6 +4,7 @@ target_link_libraries 	( modern_event  Threads::Threads )
 add_executable			( modern_time modern_time.cpp )
 add_executable			( modern_folder modern_folder.cpp )
 add_executable			( modern_file modern_file.cpp )
+add_executable			( read_combined_model read_combined_model.cpp )
 
 install(
   TARGETS 
