@@ -17,7 +17,7 @@ class CompressorRecipe(ConanFile):
         if self.settings.os == "Linux":
             apt = Apt(self)
             # 检查并安装系统依赖
-            # apt.install(["libssl-dev"])
+            # apt.install(["libssl-dev"],["vpi3-dev"])
      
     def layout(self):
         cmake_layout(self)

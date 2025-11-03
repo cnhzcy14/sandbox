@@ -49,6 +49,22 @@
 #include <vpi/algo/BoxFilter.h>
 #include <vpi/algo/ConvertImageFormat.h>
 
+#include <stdio.h>
+
+#define CHECK_STATUS(STMT)                                    \
+    do                                                        \
+    {                                                         \
+        VPIStatus status = (STMT);                            \
+        if (status != VPI_SUCCESS)                            \
+        {                                                     \
+            char buffer[VPI_MAX_STATUS_MESSAGE_LENGTH];       \
+            vpiGetLastStatusMessage(buffer, sizeof(buffer));  \
+            std::ostringstream ss;                            \
+            ss << vpiStatusGetName(status) << ": " << buffer; \
+            throw std::runtime_error(ss.str());               \
+        }                                                     \
+    } while (0);
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -58,7 +74,7 @@ int main(int argc, char *argv[])
     }
 
     // Phase 1: Initialization ---------------------------------
-
+    
     // First load the input image
     cv::Mat cvImage = cv::imread(argv[1]);
     if (cvImage.data == NULL)
@@ -70,28 +86,28 @@ int main(int argc, char *argv[])
     // Now create the stream. Passing 0 allows algorithms submitted to it to run
     // in any available backend.
     VPIStream stream;
-    vpiStreamCreate(0, &stream);
-
+    CHECK_STATUS(vpiStreamCreate(0, &stream));
+    
     // Now wrap the loaded image into a VPIImage object to be used by VPI.
     // VPI will deduce the image type based on how many channels cvImage has.
     // In this case, for OpenCV, which has 3 channels, it'll deduce to BGR8.
     VPIImage image;
-    vpiImageCreateWrapperOpenCVMat(cvImage, 0, &image);
+    CHECK_STATUS(vpiImageCreateWrapperOpenCVMat(cvImage, 0, &image));
 
     // Since we want to work with a grayscale version of input image, let's create
     // an image that will store it.
     VPIImage imageGray;
-    vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &imageGray);
+    CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &imageGray));
 
     // Now create the output images, single unsigned 8-bit channel. The image lifetime is
     // managed by VPI.
     VPIImage blurred;
-    vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &blurred);
+    CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &blurred));
 
     // Phase 2: main processing --------------------------------------
-
+    
     // Pre-process the input, converting it from BGR8 to Grayscale
-    vpiSubmitConvertImageFormat(stream, VPI_BACKEND_CUDA, image, imageGray, NULL);
+    CHECK_STATUS(vpiSubmitConvertImageFormat(stream, VPI_BACKEND_CUDA, image, imageGray, NULL));
 
     // Submit the algorithm task for processing along with inputs and outputs
     // Parameters are:
@@ -104,10 +120,10 @@ int main(int argc, char *argv[])
     // 5 and 6. box filter size, in this case, 5x5
     // 7. Border extension for when the algorithm tries to sample pixels outside the image border.
     //    VPI_BORDER_ZERO will consider all such pixels as being 0.
-    vpiSubmitBoxFilter(stream, VPI_BACKEND_CUDA, imageGray, blurred, 5, 5, VPI_BORDER_ZERO);
+    CHECK_STATUS(vpiSubmitBoxFilter(stream, VPI_BACKEND_CUDA, imageGray, blurred, 5, 5, VPI_BORDER_ZERO));
 
     // Block the current thread until until the stream finishes all tasks submitted to it up till now.
-    vpiStreamSync(stream);
+    CHECK_STATUS(vpiStreamSync(stream));
 
     // Finally retrieve the output image contents and output it to disk
 
