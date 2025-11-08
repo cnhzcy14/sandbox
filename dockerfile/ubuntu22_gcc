@@ -1,4 +1,4 @@
-FROM chameleon:ubuntu22_gcc
+FROM chameleon/gcc:ubuntu22
 # Define user name and UID/GID
 ARG USERNAME=vscode
 ARG USER_UID=1000

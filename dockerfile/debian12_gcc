@@ -1,4 +1,4 @@
-FROM chameleon:debian12_gcc
+FROM chameleon/gcc:debian12
 # Define user name and UID/GID
 ARG USERNAME=vscode
 ARG USER_UID=1000
