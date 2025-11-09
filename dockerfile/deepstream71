@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/deepstream:7.1-samples-multiarch
+FROM nvcr.io/nvidia/deepstream:7.1-gc-triton-devel
 # Define user name and UID/GID
 ARG USERNAME=vscode
 ARG USER_UID=1001

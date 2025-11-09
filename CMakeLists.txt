@@ -1,8 +1,22 @@
 cmake_minimum_required(VERSION 3.15)
 get_filename_component 	(PROJECT_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
-project(${PROJECT_NAME} 
-  DESCRIPTION "My test code" 
+
+# 现代CMake方式：先检查CUDA语言支持
+include(CheckLanguage)
+check_language(CUDA)
+
+project(${PROJECT_NAME}
+  DESCRIPTION "My test code"
   LANGUAGES CXX C)
+
+# 如果CUDA可用，则启用CUDA语言支持
+if(CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+    find_library(CUDAToolkit QUIET)
+    set(CUDA_ARCHITECTURES "86;89;90")
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -19,16 +33,6 @@ message(STATUS "Project Name:           ${PROJECT_NAME}"                        
 find_package(OpenMP QUIET)
 find_package(Threads QUIET)
 message(STATUS "  Threads:              ${Threads_FOUND}"                               )
-
-# find_package(CUDA)
-# include(CheckLanguage)
-# check_language(CUDA)
-# if(CMAKE_CUDA_COMPILER)
-#   # enable_language(CUDA)
-#   include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
-#   # cuda_select_nvcc_arch_flags(ARCH_FLAGS)
-#   set(OpenCL_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
-# endif()
 
 
 if(UNIX AND NOT APPLE)
@@ -63,6 +67,7 @@ find_package(NVDS QUIET)
 find_package(ZLIB QUIET)
 find_package(Ceres QUIET)
 find_package(OpenSSL QUIET)
+find_package(CUDAToolkit QUIET)
 
 
 # link_directories(/usr/lib/aarch64-linux-gnu)

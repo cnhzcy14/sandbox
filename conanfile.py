@@ -18,6 +18,9 @@ class CompressorRecipe(ConanFile):
             apt = Apt(self)
             # 检查并安装系统依赖
             # apt.install(["libssl-dev"],["vpi3-dev"])
+            apt.install(["vpi3-dev"])
+            # 安装TensorRT 10.3相关依赖（TensorRT会自动依赖CUDA）
+            apt.install(["libnvinfer-dev"])
      
     def layout(self):
         cmake_layout(self)
