@@ -10,6 +10,6 @@ build_type=Release
 CC=aarch64-linux-gnu-gcc-12
 CXX=aarch64-linux-gnu-g++-12
 LD=aarch64-linux-gnu-ld
-CFLAGS=-O3 -march=armv8-a+crypto+crc+fp+simd -mtune=cortex-a72 -ffunction-sections -fdata-sections -flto
-CXXFLAGS=-O3 -march=armv8-a+crypto+crc+fp+simd -mtune=cortex-a72 -ffunction-sections -fdata-sections -flto
-LDFLAGS=-Wl,--gc-sections -flto
+CFLAGS=-Os -march=armv8-a+crypto+crc+fp+simd -mtune=cortex-a72 -ffunction-sections -fdata-sections
+CXXFLAGS=-Os -march=armv8-a+crypto+crc+fp+simd -mtune=cortex-a72 -ffunction-sections -fdata-sections
+LDFLAGS=-Wl,--gc-sections
