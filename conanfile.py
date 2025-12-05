@@ -8,19 +8,22 @@ class CompressorRecipe(ConanFile):
     generators = "CMakeDeps"
 
     def requirements(self):
-        self.requires("zlib/1.3.1")
-        self.requires("openssl/1.1.1w")
+        # self.requires("zlib/1.3.1")
+        # self.requires("openssl/1.1.1w")
         # self.requires("onnxruntime/1.14.1")
         self.requires("opencv/4.5.3")
+        self.requires("libjpeg-turbo/3.0.2")
+
+        
 
     def system_requirements(self):
         if self.settings.os == "Linux":
             apt = Apt(self)
             # 检查并安装系统依赖
             # apt.install(["libssl-dev"],["vpi3-dev"])
-            apt.install(["vpi3-dev"])
+            # apt.install(["vpi3-dev"])
             # 安装TensorRT 10.3相关依赖（TensorRT会自动依赖CUDA）
-            apt.install(["libnvinfer-dev"])
+            # apt.install(["libnvinfer-dev"])
      
     def layout(self):
         cmake_layout(self)
@@ -33,6 +36,7 @@ class CompressorRecipe(ConanFile):
         # self.options["onnxruntime"].minimal_build = True
         # self.options["onnxruntime"].enable_training = False
         # self.options["onnxruntime"].use_boost = False
+        self.options["libjpeg-turbo"].libjpeg8_compatibility = True
 
         self.options["openssl"].shared = False
         self.options["openssl"].fPIC = True
@@ -127,7 +131,9 @@ class CompressorRecipe(ConanFile):
         self.options["opencv"].contrib = False
 
 
-        self.options["opencv"].with_png = True    
+        self.options["opencv"].with_jpeg = "libjpeg-turbo"    
+        self.options["opencv"].with_jpeg2000 = False    
+        self.options["opencv"].with_png = True   
         self.options["opencv"].with_openexr = False
         self.options["opencv"].with_tiff = False
         self.options["opencv"].with_webp = False   
