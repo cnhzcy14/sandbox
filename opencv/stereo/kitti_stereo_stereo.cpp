@@ -1,5 +1,5 @@
 #include <opencv2/opencv.hpp>
-#include <opencv2/viz.hpp>
+// #include <opencv2/viz.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -238,18 +238,34 @@ Mat computeDisparitySGBM(const Mat& img_left_rect, const Mat& img_right_rect, in
     return disp;
 }
 
-// 将视差图转换为深度图
+// 将视差图转换为CV_16U深度图（毫米单位）
 Mat disparityToDepth(const Mat& disparity, const KITTIParams& params) {
-    Mat depth = Mat::zeros(disparity.size(), CV_32F);
+    Mat depth = Mat::zeros(disparity.size(), CV_16U);
     
     double baseline = abs(params.P_rect_01.at<double>(0, 3) / params.P_rect_01.at<double>(0, 0));
     double fx = params.P_rect_00.at<double>(0, 0);
     
-    for (int y = 0; y < disparity.rows; y++) {
-        for (int x = 0; x < disparity.cols; x++) {
-            float d = disparity.at<float>(y, x);
-            if (d > 0) {
-                depth.at<float>(y, x) = (fx * baseline) / d;
+    // 确保视差图是CV_32F类型
+    Mat disparity_32f;
+    if (disparity.type() != CV_32F) {
+        disparity.convertTo(disparity_32f, CV_32F, 1.0 / 16.0);  // SGBM视差需要除以16
+    } else {
+        disparity_32f = disparity;
+    }
+    
+    for (int y = 0; y < disparity_32f.rows; y++) {
+        for (int x = 0; x < disparity_32f.cols; x++) {
+            float d = disparity_32f.at<float>(y, x);
+            // 检查有效视差值（SGBM中无效视差为0或极小值）
+            if (d > 0.1f && d < 256.0f) {  // 合理的视差范围
+                // 计算深度（米），然后转换为毫米并存储为16位无符号整数
+                float depth_meters = (fx * baseline) / d;
+                if (depth_meters > 0.1f && depth_meters < 100.0f) {  // 合理的深度范围（0.1m到100m）
+                    uint16_t depth_mm = static_cast<uint16_t>(depth_meters * 1000.0);
+                    if (depth_mm > 0 && depth_mm < 65535) {
+                        depth.at<uint16_t>(y, x) = depth_mm;
+                    }
+                }
             }
         }
     }
@@ -257,9 +273,9 @@ Mat disparityToDepth(const Mat& disparity, const KITTIParams& params) {
     return depth;
 }
 
-// 将深度图对齐到cam2坐标系
+// 将CV_16U深度图对齐到cam2坐标系
 Mat alignDepthToCam2(const Mat& depth_cam0, const KITTIParams& params) {
-    Mat depth_cam2 = Mat::zeros(depth_cam0.size(), CV_32F);
+    Mat depth_cam2 = Mat::zeros(depth_cam0.size(), CV_16U);
     
     // 获取相机参数
     Mat K_00 = params.K_00;
@@ -276,13 +292,13 @@ Mat alignDepthToCam2(const Mat& depth_cam0, const KITTIParams& params) {
     Mat map1, map2;
     initUndistortRectifyMap(K_00, Mat::zeros(5, 1, CV_64F), R_cam0_to_cam2, K_02, depth_cam0.size(), CV_32FC1, map1, map2);
     
-    // 重映射深度图
-    remap(depth_cam0, depth_cam2, map1, map2, INTER_LINEAR);
+    // 重映射深度图（使用最近邻插值保持精度）
+    remap(depth_cam0, depth_cam2, map1, map2, INTER_NEAREST);
     
     return depth_cam2;
 }
 
-// 将深度图转换为点云
+// 将CV_16U深度图转换为点云
 Mat depthToPointCloud(const Mat& depth, const Mat& color, const KITTIParams& params) {
     Mat point_cloud;
     
@@ -296,15 +312,18 @@ Mat depthToPointCloud(const Mat& depth, const Mat& color, const KITTIParams& par
     
     for (int y = 0; y < depth.rows; y += 2) {  // 降采样以提高性能
         for (int x = 0; x < depth.cols; x += 2) {
-            float d = depth.at<float>(y, x);
-            if (d > 0 && d < 100) {  // 限制深度范围
-                Vec3f point;
-                point[0] = (x - cx) * d / fx;  // X
-                point[1] = (y - cy) * d / fy;  // Y
-                point[2] = d;                  // Z
-                
-                points.push_back(point);
-                colors.push_back(color.at<Vec3b>(y, x));
+            uint16_t d_mm = depth.at<uint16_t>(y, x);
+            if (d_mm > 0 && d_mm < 65535) {  // 检查有效深度值（毫米）
+                float d_meters = d_mm / 1000.0f;  // 转换回米
+                if (d_meters < 100) {  // 限制深度范围
+                    Vec3f point;
+                    point[0] = (x - cx) * d_meters / fx;  // X
+                    point[1] = (y - cy) * d_meters / fy;  // Y
+                    point[2] = d_meters;                  // Z
+                    
+                    points.push_back(point);
+                    colors.push_back(color.at<Vec3b>(y, x));
+                }
             }
         }
     }
@@ -316,25 +335,25 @@ Mat depthToPointCloud(const Mat& depth, const Mat& color, const KITTIParams& par
 }
 
 // 使用cv::viz显示点云
-void visualizePointCloud(const Mat& point_cloud, const vector<Vec3b>& colors) {
-    viz::Viz3d window("Point Cloud");
+// void visualizePointCloud(const Mat& point_cloud, const vector<Vec3b>& colors) {
+//     viz::Viz3d window("Point Cloud");
     
-    // 创建彩色点云
-    Mat color_cloud(point_cloud.size(), CV_8UC3);
-    for (int i = 0; i < point_cloud.rows; i++) {
-        color_cloud.at<Vec3b>(i) = colors[i];
-    }
+//     // 创建彩色点云
+//     Mat color_cloud(point_cloud.size(), CV_8UC3);
+//     for (int i = 0; i < point_cloud.rows; i++) {
+//         color_cloud.at<Vec3b>(i) = colors[i];
+//     }
     
-    // 显示点云
-    viz::WCloud cloud_widget(point_cloud, color_cloud);
-    window.showWidget("Point Cloud", cloud_widget);
+//     // 显示点云
+//     viz::WCloud cloud_widget(point_cloud, color_cloud);
+//     window.showWidget("Point Cloud", cloud_widget);
     
-    // 设置相机视角
-    window.setViewerPose(Affine3f().translate(Vec3f(0, 0, -50)));
+//     // 设置相机视角
+//     window.setViewerPose(Affine3f().translate(Vec3f(0, 0, -50)));
     
-    cout << "按任意键关闭点云显示..." << endl;
-    window.spin();
-}
+//     cout << "按任意键关闭点云显示..." << endl;
+//     window.spin();
+// }
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -436,8 +455,8 @@ int main(int argc, char** argv) {
     
     for (int y = 0; y < depth_cam2.rows; y += 2) {
         for (int x = 0; x < depth_cam2.cols; x += 2) {
-            float d = depth_cam2.at<float>(y, x);
-            if (d > 0 && d < 100) {
+            uint16_t d_mm = depth_cam2.at<uint16_t>(y, x);
+            if (d_mm > 0 && d_mm < 65535) {
                 colors.push_back(img2_undistorted.at<Vec3b>(y, x));
             }
         }
@@ -446,25 +465,29 @@ int main(int argc, char** argv) {
     // 保存结果图像
     Mat disp_vis;
     normalize(disparity, disp_vis, 0, 255, NORM_MINMAX, CV_8U);
-    // applyColorMap(disp_vis, disp_vis, COLORMAP_JET);
     
     char output_name[256];
     snprintf(output_name, sizeof(output_name), "disparity_%06d.png", frame_id);
     imwrite(output_name, disp_vis);
     
-    snprintf(output_name, sizeof(output_name), "depth_%06d.png", frame_id);
-    imwrite(output_name, depth_cam2 * 0.01);  // 缩放以便显示
+    // 保存CV_16U深度图（毫米单位）
+    snprintf(output_name, sizeof(output_name), "depth_%06d_16u.png", frame_id);
+    imwrite(output_name, depth_cam2);
     
     snprintf(output_name, sizeof(output_name), "img2_undistorted_%06d.png", frame_id);
     imwrite(output_name, img2_undistorted);
     
-    cout << "结果已保存到 disparity_" << frame_id << ".png, depth_" << frame_id << ".png, img2_undistorted_" << frame_id << ".png" << endl;
+    cout << "结果已保存到:" << endl;
+    cout << "  - 视差图: disparity_" << frame_id << ".png" << endl;
+    cout << "  - 深度图(CV_16U): depth_" << frame_id << "_16u.png" << endl;
+    cout << "  - 深度图(可视化): depth_" << frame_id << ".png" << endl;
+    cout << "  - 去畸变图像: img2_undistorted_" << frame_id << ".png" << endl;
     
     // 显示点云（如果可能）
-    if (!point_cloud.empty() && !colors.empty()) {
-        cout << "显示点云..." << endl;
-        visualizePointCloud(point_cloud, colors);
-    }
+    // if (!point_cloud.empty() && !colors.empty()) {
+    //     cout << "显示点云..." << endl;
+    //     visualizePointCloud(point_cloud, colors);
+    // }
     
     return 0;
 }

@@ -114,21 +114,34 @@ class CompressorRecipe(ConanFile):
         self.options["openssl"].no_threads = False
 
         # 设置OpenCV基本选项
-        self.options["opencv"].shared = False  
-        self.options["opencv"].parallel = "openmp" 
+        self.options["opencv"].shared = False
+        self.options["opencv"].parallel = "openmp"
         self.options["opencv"].with_opencl = False
         self.options["opencv"].with_cuda = False
         self.options["opencv"].with_cublas = False
         self.options["opencv"].with_cudnn = False
 
-        self.options["opencv"].gapi = False  
-        self.options["opencv"].ml = False  
-        self.options["opencv"].dnn = False  
-        self.options["opencv"].videoio = False  
+        # 启用rgbd模块需要的必需模块
+        self.options["opencv"].calib3d = True  # rgbd模块的必需依赖
+        self.options["opencv"].imgproc = True  # rgbd模块的必需依赖
+        self.options["opencv"].features2d = True  # calib3d的依赖
+        self.options["opencv"].flann = True  # calib3d的依赖
+        
+        # 启用rgbd模块
+        self.options["opencv"].rgbd = True  # RGB-D模块
+        
+        # 确保eigen支持（rgbd模块需要）
+        self.options["opencv"].with_eigen = True
+        
+        # 禁用不需要的模块
+        self.options["opencv"].gapi = False
+        self.options["opencv"].ml = False
+        self.options["opencv"].dnn = False
+        self.options["opencv"].videoio = False
         self.options["opencv"].photo = False
         self.options["opencv"].highgui = False
         self.options["opencv"].objdetect = False
-        self.options["opencv"].contrib = False
+        self.options["opencv"].contrib = True
 
 
         self.options["opencv"].with_jpeg = "libjpeg-turbo"    
