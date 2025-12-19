@@ -1,4 +1,5 @@
 #include <opencv2/opencv.hpp>
+#include <opencv2/rgbd.hpp>
 // #include <opencv2/viz.hpp>
 #include <iostream>
 #include <fstream>
@@ -16,6 +17,7 @@ struct KITTIParams {
     Mat R_rect_00, R_rect_01, R_rect_02;  // 校正旋转矩阵
     Mat P_rect_00, P_rect_01, P_rect_02;  // 校正投影矩阵
     Size img_size;
+    Size img_size_rect;
     Mat Q;  // 视差到深度的转换矩阵
 };
 
@@ -40,6 +42,12 @@ bool parseKITTICalibration(const string& calib_file, KITTIParams& params) {
             iss >> width >> height;
             params.img_size = Size(static_cast<int>(width), static_cast<int>(height));
             cout << "图像尺寸: " << params.img_size.width << "x" << params.img_size.height << endl;
+        }
+        else if (key == "S_rect_00:") {
+            double width, height;
+            iss >> width >> height;
+            params.img_size_rect = Size(static_cast<int>(width), static_cast<int>(height));
+            cout << "校正后图像尺寸: " << params.img_size_rect.width << "x" << params.img_size_rect.height << endl;
         }
         else if (key == "K_00:") {
             params.K_00 = Mat::eye(3, 3, CV_64F);
@@ -273,28 +281,36 @@ Mat disparityToDepth(const Mat& disparity, const KITTIParams& params) {
     return depth;
 }
 
-// 将CV_16U深度图对齐到cam2坐标系
+// 将CV_16U深度图对齐到去畸变的cam2坐标系
 Mat alignDepthToCam2(const Mat& depth_cam0, const KITTIParams& params) {
-    Mat depth_cam2 = Mat::zeros(depth_cam0.size(), CV_16U);
-    
-    // 获取相机参数
-    Mat K_00 = params.K_00;
-    Mat K_02 = params.K_02;
-    Mat D_02 = params.D_02;
-    Mat R_02 = params.R_02;
-    Mat T_02 = params.T_02;
-    
-    // 计算从cam0到cam2的变换
-    Mat R_cam0_to_cam2 = R_02.t();
-    Mat t_cam0_to_cam2 = -R_02.t() * T_02;
-    
-    // 创建映射
-    Mat map1, map2;
-    initUndistortRectifyMap(K_00, Mat::zeros(5, 1, CV_64F), R_cam0_to_cam2, K_02, depth_cam0.size(), CV_32FC1, map1, map2);
-    
-    // 重映射深度图（使用最近邻插值保持精度）
-    remap(depth_cam0, depth_cam2, map1, map2, INTER_NEAREST);
-    
+    Mat depth_cam2;
+
+    // 从P_rect_00提取前3x3作为未注册相机内参
+    Mat unregisteredCameraMatrix = params.P_rect_00(Rect(0, 0, 3, 3)).clone();
+    // 从P_rect_02提取前3x3作为注册相机内参
+    Mat registeredCameraMatrix = params.P_rect_02(Rect(0, 0, 3, 3)).clone();
+    // 注册相机畸变系数为零
+    Mat registeredDistCoeffs = Mat::zeros(1, 5, CV_64F);
+
+    // 构造从 rectified cam0 -> rectified cam2 的变换
+    // R = R_rect_02 * R_02 * R_rect_00.t()
+    // t = R_rect_02 * T_02
+    Mat Rt = Mat::eye(4, 4, CV_64F);
+    Mat R_correct = params.R_rect_02 * params.R_02 * params.R_rect_00.t();
+    Mat t_correct = params.R_rect_02 * params.T_02;
+
+    R_correct.copyTo(Rt(Rect(0, 0, 3, 3)));
+    t_correct.copyTo(Rt(Rect(3, 0, 1, 3)));
+
+    // 打印变换信息用于调试
+    cout << "变换矩阵 R:" << endl << R_correct << endl;
+    cout << "变换向量 t (m):" << endl << t_correct << endl;
+
+    // 使用cv::rgbd::registerDepth进行深度图对齐（保持 depth 为 CV_16U 毫米）
+    cv::rgbd::registerDepth(unregisteredCameraMatrix, registeredCameraMatrix,
+                            registeredDistCoeffs, Rt, depth_cam0,
+                            depth_cam0.size(), depth_cam2, true);
+
     return depth_cam2;
 }
 
@@ -302,10 +318,11 @@ Mat alignDepthToCam2(const Mat& depth_cam0, const KITTIParams& params) {
 Mat depthToPointCloud(const Mat& depth, const Mat& color, const KITTIParams& params) {
     Mat point_cloud;
     
-    double fx = params.P_rect_02.at<double>(0, 0);
-    double fy = params.P_rect_02.at<double>(1, 1);
-    double cx = params.P_rect_02.at<double>(0, 2);
-    double cy = params.P_rect_02.at<double>(1, 2);
+    // 使用去畸变cam2的内参K_02
+    double fx = params.K_02.at<double>(0, 0);
+    double fy = params.K_02.at<double>(1, 1);
+    double cx = params.K_02.at<double>(0, 2);
+    double cy = params.K_02.at<double>(1, 2);
     
     vector<Vec3f> points;
     vector<Vec3b> colors;
@@ -334,26 +351,6 @@ Mat depthToPointCloud(const Mat& depth, const Mat& color, const KITTIParams& par
     return point_cloud;
 }
 
-// 使用cv::viz显示点云
-// void visualizePointCloud(const Mat& point_cloud, const vector<Vec3b>& colors) {
-//     viz::Viz3d window("Point Cloud");
-    
-//     // 创建彩色点云
-//     Mat color_cloud(point_cloud.size(), CV_8UC3);
-//     for (int i = 0; i < point_cloud.rows; i++) {
-//         color_cloud.at<Vec3b>(i) = colors[i];
-//     }
-    
-//     // 显示点云
-//     viz::WCloud cloud_widget(point_cloud, color_cloud);
-//     window.showWidget("Point Cloud", cloud_widget);
-    
-//     // 设置相机视角
-//     window.setViewerPose(Affine3f().translate(Vec3f(0, 0, -50)));
-    
-//     cout << "按任意键关闭点云显示..." << endl;
-//     window.spin();
-// }
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -404,23 +401,25 @@ int main(int argc, char** argv) {
     }
     
     // 步骤2: 计算校正映射
-    Mat map11, map12, map21, map22;
-    initUndistortRectifyMap(params.K_00, params.D_00, R1, P1, params.img_size, CV_32FC1, map11, map12);
-    initUndistortRectifyMap(params.K_01, params.D_01, R2, P2, params.img_size, CV_32FC1, map21, map22);
+    Mat map11, map12, map21, map22, map31, map32;
+    initUndistortRectifyMap(params.K_00, params.D_00, params.R_rect_00, params.P_rect_00, params.img_size_rect, CV_32FC1, map11, map12);
+    initUndistortRectifyMap(params.K_01, params.D_01, params.R_rect_01, params.P_rect_01, params.img_size_rect, CV_32FC1, map21, map22);
+    initUndistortRectifyMap(params.K_02, params.D_02, params.R_rect_02, params.P_rect_02, params.img_size_rect, CV_32FC1, map31, map32);
     
     // 检查映射是否有效
-    if (map11.empty() || map12.empty() || map21.empty() || map22.empty()) {
+    if (map11.empty() || map12.empty() || map21.empty() || map22.empty() || map31.empty() || map32.empty()) {
         cout << "校正映射计算失败" << endl;
         return -1;
     }
     
     // 步骤3: 应用校正映射（去畸变+立体校正）
-    Mat img0_rect, img1_rect;
+    Mat img0_rect, img1_rect, img2_rect;
     remap(img0, img0_rect, map11, map12, INTER_LINEAR);
     remap(img1, img1_rect, map21, map22, INTER_LINEAR);
+    remap(img2, img2_rect, map31, map32, INTER_LINEAR);
     
     // 检查校正后的图像是否有效
-    if (img0_rect.empty() || img1_rect.empty()) {
+    if (img0_rect.empty() || img1_rect.empty() || img2_rect.empty()) {
         cout << "图像校正失败" << endl;
         return -1;
     }
@@ -432,50 +431,36 @@ int main(int argc, char** argv) {
     // 步骤5: 将视差图转换为深度图
     cout << "正在转换深度图..." << endl;
     Mat depth = disparityToDepth(disparity, params);
-    
-    // 步骤6: 对cam2图像进行去畸变
-    cout << "正在对cam2图像去畸变..." << endl;
-    Mat img2_undistorted;
-    undistort(img2, img2_undistorted, params.K_02, params.D_02);
-    
-    // 步骤7: 将深度图对齐到cam2坐标系
+
+
+
+    // 步骤6: 将深度图对齐到去畸变的cam2坐标系
     cout << "正在对齐深度图到cam2..." << endl;
     Mat depth_cam2 = alignDepthToCam2(depth, params);
     
-    // 步骤8: 将深度图转换为点云
-    cout << "正在生成点云..." << endl;
-    Mat point_cloud = depthToPointCloud(depth_cam2, img2_undistorted, params);
-    
-    // 提取颜色信息
-    vector<Vec3b> colors;
-    double fx = params.P_rect_02.at<double>(0, 0);
-    double fy = params.P_rect_02.at<double>(1, 1);
-    double cx = params.P_rect_02.at<double>(0, 2);
-    double cy = params.P_rect_02.at<double>(1, 2);
-    
-    for (int y = 0; y < depth_cam2.rows; y += 2) {
-        for (int x = 0; x < depth_cam2.cols; x += 2) {
-            uint16_t d_mm = depth_cam2.at<uint16_t>(y, x);
-            if (d_mm > 0 && d_mm < 65535) {
-                colors.push_back(img2_undistorted.at<Vec3b>(y, x));
-            }
-        }
-    }
-    
-    // 保存结果图像
+
+    char output_name[256];
+
+    // 保存cam0去畸变图
+    snprintf(output_name, sizeof(output_name), "img0_undistorted_%06d.png", frame_id);
+    imwrite(output_name, img0_rect);
+
+    // 保存可视化视差图
     Mat disp_vis;
     normalize(disparity, disp_vis, 0, 255, NORM_MINMAX, CV_8U);
-    
-    char output_name[256];
     snprintf(output_name, sizeof(output_name), "disparity_%06d.png", frame_id);
     imwrite(output_name, disp_vis);
     
     // 保存CV_16U深度图（毫米单位）
-    snprintf(output_name, sizeof(output_name), "depth_%06d_16u.png", frame_id);
+    snprintf(output_name, sizeof(output_name), "depth_%06d.png", frame_id);
+    imwrite(output_name, depth);
+
+    // 保存对齐后CV_16U深度图（毫米单位）
+    snprintf(output_name, sizeof(output_name), "depth_register_%06d.png", frame_id);
     imwrite(output_name, depth_cam2);
     
     snprintf(output_name, sizeof(output_name), "img2_undistorted_%06d.png", frame_id);
-    imwrite(output_name, img2_undistorted);
+    imwrite(output_name, img2_rect);
     
     cout << "结果已保存到:" << endl;
     cout << "  - 视差图: disparity_" << frame_id << ".png" << endl;
@@ -483,11 +468,6 @@ int main(int argc, char** argv) {
     cout << "  - 深度图(可视化): depth_" << frame_id << ".png" << endl;
     cout << "  - 去畸变图像: img2_undistorted_" << frame_id << ".png" << endl;
     
-    // 显示点云（如果可能）
-    // if (!point_cloud.empty() && !colors.empty()) {
-    //     cout << "显示点云..." << endl;
-    //     visualizePointCloud(point_cloud, colors);
-    // }
     
     return 0;
 }
