@@ -274,50 +274,8 @@ write_kitti_output (AppCtx * appCtx, NvDsBatchMeta * batch_meta)
 static void
 write_kitti_past_track_output (AppCtx * appCtx, NvDsBatchMeta * batch_meta)
 {
-  if (!appCtx->config.kitti_track_dir_path)
-    return;
-
-  // dump past frame tracked objects appending current frame objects
-  gchar bbox_file[1024] = { 0 };
-  FILE *bbox_params_dump_file = NULL;
-
-    NvDsPastFrameObjBatch *pPastFrameObjBatch = NULL;
-    NvDsUserMetaList *bmeta_list = NULL;
-    NvDsUserMeta *user_meta = NULL;
-    for(bmeta_list=batch_meta->batch_user_meta_list; bmeta_list!=NULL; bmeta_list=bmeta_list->next){
-      user_meta = (NvDsUserMeta *)bmeta_list->data;
-      if(user_meta && user_meta->base_meta.meta_type==NVDS_TRACKER_PAST_FRAME_META){
-        pPastFrameObjBatch = (NvDsPastFrameObjBatch *) (user_meta->user_meta_data);
-        for (guint si=0; si < pPastFrameObjBatch->numFilled; si++){
-          NvDsPastFrameObjStream *objStream = (pPastFrameObjBatch->list) + si;
-          guint stream_id = (guint)(objStream->streamID);
-          for (guint li=0; li<objStream->numFilled; li++){
-            NvDsPastFrameObjList *objList = (objStream->list) + li;
-            for (guint oi=0; oi<objList->numObj; oi++) {
-              NvDsPastFrameObj *obj = (objList->list) + oi;
-              g_snprintf (bbox_file, sizeof (bbox_file) - 1,
-                "%s/%02u_%03u_%06lu.txt", appCtx->config.kitti_track_dir_path,
-                appCtx->index, stream_id, (gulong) obj->frameNum);
-
-              float left = obj->tBbox.left;
-              float right = left + obj->tBbox.width;
-              float top = obj->tBbox.top;
-              float bottom = top + obj->tBbox.height;
-              // Past frame object confidence given by tracker
-              float confidence = obj->confidence;
-              bbox_params_dump_file = fopen (bbox_file, "a");
-              if (!bbox_params_dump_file){
-                continue;
-              }
-              fprintf(bbox_params_dump_file,
-                "%s %lu 0.0 0 0.0 %f %f %f %f 0.0 0.0 0.0 0.0 0.0 0.0 0.0 %f\n",
-                objList->objLabel, objList->uniqueId, left, top, right, bottom, confidence);
-              fclose (bbox_params_dump_file);
-            }
-          }
-        }
-      }
-    }
+  /* Past frame object tracking is not supported in current DeepStream version */
+  return;
 }
 
 /**
@@ -594,10 +552,11 @@ analytics_done_buf_prob (GstPad * pad, GstPadProbeInfo * info, gpointer u_data)
    * Output KITTI labels with tracking ID if configured to do so.
    */
   write_kitti_track_output(appCtx, batch_meta);
-  if (appCtx->config.tracker_config.enable_past_frame)
-  {
-      write_kitti_past_track_output (appCtx, batch_meta);
-  }
+  /* Past frame tracking is not supported in current DeepStream version */
+  // if (appCtx->config.tracker_config.enable_past_frame)
+  // {
+  //     write_kitti_past_track_output (appCtx, batch_meta);
+  // }
   if (appCtx->bbox_generated_post_analytics_cb)
   {
     appCtx->bbox_generated_post_analytics_cb (appCtx, buf, batch_meta, index);
@@ -1040,7 +999,9 @@ create_pipeline (AppCtx * appCtx,
     switch (sink_config->type) {
       case NV_DS_SINK_FAKE:
       case NV_DS_SINK_RENDER_EGL:
+#if defined(IS_TEGRA) && defined(NV_DS_SINK_RENDER_3D)
       case NV_DS_SINK_RENDER_3D:
+#endif
       case NV_DS_SINK_RENDER_DRM:
         /* Set the "qos" property of sink, if not explicitly specified in the
            config. */

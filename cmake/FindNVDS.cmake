@@ -1,5 +1,5 @@
 # Select install dir using provided version.
-SET(NVDS_INSTALL_DIR /opt/nvidia/deepstream/deepstream-7.0)
+SET(NVDS_INSTALL_DIR /opt/nvidia/deepstream/deepstream)
 
 # List all libraries in deepstream.
 SET(NVDS_LIBS

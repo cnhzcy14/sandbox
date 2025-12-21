@@ -374,7 +374,7 @@ parse_config_file (NvDsConfig *config, gchar *cfg_file_path)
     }
 
     if (!g_strcmp0 (*group, CONFIG_GROUP_PREPROCESS)) {
-      parse_err = !parse_preprocess (&config->preprocess_config, cfg_file, cfg_file_path);
+      parse_err = !parse_preprocess (&config->preprocess_config, cfg_file, *group, cfg_file_path);
     }
 
     if (!g_strcmp0 (*group, CONFIG_GROUP_PRIMARY_GIE)) {

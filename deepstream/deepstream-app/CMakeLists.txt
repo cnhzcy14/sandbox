@@ -19,6 +19,7 @@ target_link_libraries(deepstream-app
     ${YAML_CPP_LIBRARIES}
     ${NVDS_LIBRARIES}
     ${CUDA_LIBRARIES}
+    $<$<TARGET_EXISTS:CUDA::cudart>:CUDA::cudart>
     X11::X11
     m
 )

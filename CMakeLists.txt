@@ -12,7 +12,7 @@ project(${PROJECT_NAME}
 # 如果CUDA可用，则启用CUDA语言支持
 if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
-    find_library(CUDAToolkit QUIET)
+    find_package(CUDAToolkit QUIET)  # 现代 CMake 方式
     set(CUDA_ARCHITECTURES "86;89;90")
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
