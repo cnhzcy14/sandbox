@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
 get_filename_component 	(PROJECT_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 
-# 现代CMake方式：先检查CUDA语言支持
-include(CheckLanguage)
-check_language(CUDA)
-
 project(${PROJECT_NAME}
   DESCRIPTION "My test code"
   LANGUAGES CXX C)
 
-# 如果CUDA可用，则启用CUDA语言支持
+# 现代CMake方式：先检查CUDA语言支持
+include(CheckLanguage)
+check_language(CUDA)
+
+# 检查CUDA是否可用，如果可用则启用CUDA支持
 if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     find_package(CUDAToolkit QUIET)  # 现代 CMake 方式
