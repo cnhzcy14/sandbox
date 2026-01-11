@@ -1,0 +1,6 @@
+if(OPENVX_LIBRARY AND OPENVX_INCLUDE_DIR)
+message(STATUS "  OpenVX:               ${MIVISIONX_BACKEND}"                                )
+message(STATUS "  OpenVX:               ${OPENVX_LIBRARY}"                                )
+add_subdirectory 		(test)
+add_subdirectory 		(bubble-pop)
+endif()

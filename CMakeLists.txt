@@ -53,7 +53,7 @@ if(UNIX AND NOT APPLE)
   pkg_check_modules(LAPACK QUIET IMPORTED_TARGET lapack64)
 endif()
 
-# find_package(OpenCL QUIET)
+find_package(OpenCL QUIET)
 find_package(OpenCV QUIET)
 find_package(yaml-cpp QUIET)
 find_package(Eigen3 QUIET NO_MODULE)
@@ -68,23 +68,10 @@ find_package(ZLIB QUIET)
 find_package(Ceres QUIET)
 find_package(OpenSSL QUIET)
 find_package(CUDAToolkit QUIET)
-
+find_package(MIVISIONX QUIET)
 
 # link_directories(/usr/lib/aarch64-linux-gnu)
 # set(LIBS ${LIBS} Mali)
-
-# if(DEFINED OPENVX_INCLUDES)
-#     message(STATUS "OPENVX_INCLUDES: \t${OPENVX_INCLUDES}")
-#     include_directories(${OPENVX_INCLUDES})
-# else()
-#     message(STATUS "OPENVX_INCLUDES: \t<empty>")
-# endif()
-
-# if(DEFINED OPENVX_LIBRARIES)
-#     message(STATUS "OPENVX_LIBRARIES: \t${OPENVX_LIBRARIES}")
-# else()
-#     message(STATUS "OPENVX_LIBRARIES: \t<empty>")
-# endif()
 
 # set(LIBS ${LIBS} PkgConfig::BLAS)
 # set(LIBS ${LIBS} PkgConfig::LAPACK)
@@ -93,11 +80,7 @@ find_package(CUDAToolkit QUIET)
 # set(LIBS ${LIBS} PkgConfig::ZMQ)
 
 add_subdirectory 		(opencl)
-
-# openvx
-# add_subdirectory 		(openvx/test)
-# add_subdirectory 		(openvx/bubble-pop)
-
+add_subdirectory 		(openvx)
 add_subdirectory 		(opencv)
 add_subdirectory 		(apriltag)
 add_subdirectory 		(openmp)
