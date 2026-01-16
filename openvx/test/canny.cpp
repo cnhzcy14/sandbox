@@ -200,11 +200,13 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    ERROR_CHECK_STATUS(vxReleaseGraph(&graph));
+    
+    ERROR_CHECK_STATUS(vxReleaseThreshold(&hyst));
     ERROR_CHECK_STATUS(vxReleaseImage(&yuv_image));
     ERROR_CHECK_STATUS(vxReleaseImage(&luma_image));
     ERROR_CHECK_STATUS(vxReleaseImage(&input_rgb_image));
     ERROR_CHECK_STATUS(vxReleaseImage(&output_filtered_image));
+    ERROR_CHECK_STATUS(vxReleaseGraph(&graph));
     ERROR_CHECK_STATUS(vxReleaseContext(&context));
     return 0;
 }

@@ -92,11 +92,7 @@ add_subdirectory 		(gstreamer)
 add_subdirectory 		(cuda)
 add_subdirectory 		(cpp)
 add_subdirectory 		(c)
-
-# dma-buf
-# add_subdirectory 		(dmabuf/dma-buf-texture-sharing)
-# add_subdirectory 		(dmabuf/drm-v4l2-test)
-# add_subdirectory 		(dmabuf/shctx)
+add_subdirectory 		(dmabuf)
 
 # drm
 # add_subdirectory 		(drm/drmtoy)
