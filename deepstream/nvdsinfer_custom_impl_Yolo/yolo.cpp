@@ -204,8 +204,15 @@ Yolo::createEngine(nvinfer1::IBuilder* builder)
   config->setProfilingVerbosity(nvinfer1::ProfilingVerbosity::kDETAILED);
 #endif
 
-  nvinfer1::ICudaEngine* engine = builder->buildEngineWithConfig(*network, *config);
-  if (engine) {
+  nvinfer1::IHostMemory* serializedEngine = builder->buildSerializedNetwork(*network, *config);
+  nvinfer1::ICudaEngine* engine = nullptr;
+  if (serializedEngine) {
+    nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(*builder->getLogger());
+    if (runtime) {
+      engine = runtime->deserializeCudaEngine(serializedEngine->data(), serializedEngine->size());
+      delete runtime;
+    }
+    delete serializedEngine;
     std::cout << "Building complete\n" << std::endl;
   }
   else {

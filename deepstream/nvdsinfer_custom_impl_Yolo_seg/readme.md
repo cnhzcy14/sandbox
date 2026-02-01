@@ -1,0 +1,5 @@
+```
+gst-launch-1.0 filesrc location=/media/cnhzcy14/work/project/sandbox/data/sample_720p.h264 ! h264parse ! nvv4l2decoder ! queue ! mux.sink_0 nvstreammux name=mux batch-size=1 width=1280 height=720 batched-push-timeout=40000 ! nvinfer config-file-path=/media/cnhzcy14/work/project/sandbox/deepstream/nvdsinfer_custom_impl_Yolo_seg/config_infer_primary_yolo11_seg.yml ! nvdsosd display-mask=1 gpu-id=0  ! nveglglessink
+
+gst-launch-1.0 multifilesrc location="/media/cnhzcy14/work/data/kitti/2011_09_26/2011_09_26_drive_0001_sync/image_03/data/%010d.png" index=0 caps="image/png,framerate=20/1" ! pngdec ! nvvideoconvert ! queue ! mux.sink_0 nvstreammux name=mux batch-size=1 width=1242 height=375 batched-push-timeout=40000 ! nvinfer config-file-path=/media/cnhzcy14/work/project/DeepStream-Yolo-Seg/config_infer_primary_yolo11_seg.txt ! nvdsosd display-mask=1 gpu-id=0  ! nvv4l2h264enc bitrate=8000000  ! h264parse ! mp4mux ! filesink location=output.mp4
+```

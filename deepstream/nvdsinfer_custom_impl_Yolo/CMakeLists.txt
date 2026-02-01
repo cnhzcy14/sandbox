@@ -28,11 +28,16 @@ add_library(nvdsinfer_custom_impl_Yolo SHARED
 )
 target_include_directories(nvdsinfer_custom_impl_Yolo PRIVATE
     ${NVDS_INCLUDE_DIRS}
+    ${DEEPSTREAM_APP_COMMON_INCLUDE_DIRS}
 )
 set_target_properties(nvdsinfer_custom_impl_Yolo PROPERTIES
-                            CUDA_SEPARABLE_COMPILATION ON)
+                            CUDA_SEPARABLE_COMPILATION ON
+                            CUDA_ARCHITECTURES "86;89;90")
 target_link_libraries(nvdsinfer_custom_impl_Yolo
     ${OpenCV_LIBS}
     trt::nvonnxparser
     stdc++fs
+    $<$<TARGET_EXISTS:CUDA::cudart>:CUDA::cudart>
+    ${NVDS_LIBRARIES}
+    ${CUDA_LIBRARIES}
 )

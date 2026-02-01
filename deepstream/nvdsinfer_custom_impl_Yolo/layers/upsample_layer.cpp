@@ -24,7 +24,7 @@ upsampleLayer(int layerIdx, std::map<std::string, std::string>& block, nvinfer1:
   assert(resize != nullptr);
   std::string resizeLayerName = "upsample_" + std::to_string(layerIdx);
   resize->setName(resizeLayerName.c_str());
-  resize->setResizeMode(nvinfer1::ResizeMode::kNEAREST);
+  resize->setResizeMode(nvinfer1::InterpolationMode::kNEAREST);
   resize->setScales(scale, 4);
   output = resize->getOutput(0);
 

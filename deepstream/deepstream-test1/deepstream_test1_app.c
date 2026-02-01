@@ -1,24 +1,25 @@
+
+
 /*
- * Copyright (c) 2018-2022, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
+
+/*
+gst-launch-1.0 filesrc location=/media/cnhzcy14/work/project/sandbox/data/sample_720p.h264 ! \
+h264parse ! nvv4l2decoder ! queue ! mux.sink_0 nvstreammux name=mux batch-size=1 width=1280 height=720 batched-push-timeout=40000 ! \
+nvinfer config-file-path=/media/cnhzcy14/work/project/sandbox/deepstream/deepstream-test1/config/dstest1_pgie_config.yml ! \
+nvvideoconvert ! nvdsosd ! nveglglessink
+*/
+
+
 
 #include <gst/gst.h>
 #include <glib.h>
@@ -41,6 +42,14 @@
 /* Muxer batch formation timeout, for e.g. 40 millisec. Should ideally be set
  * based on the fastest source's framerate. */
 #define MUXER_BATCH_TIMEOUT_USEC 40000
+
+/* Check for parsing error. */
+#define RETURN_ON_PARSER_ERROR(parse_expr)                    \
+    if (NVDS_YAML_PARSER_SUCCESS != parse_expr)               \
+    {                                                         \
+        g_printerr("Error in parsing configuration file.\n"); \
+        return -1;                                            \
+    }
 
 gint frame_number = 0;
 gchar pgie_classes_str[4][32] = {"Vehicle", "TwoWheeler", "Person",
@@ -132,8 +141,8 @@ bus_call(GstBus *bus, GstMessage *msg, gpointer data)
         break;
     case GST_MESSAGE_ERROR:
     {
-        gchar *debug;
-        GError *error;
+        gchar *debug = NULL;
+        GError *error = NULL;
         gst_message_parse_error(msg, &error, &debug);
         g_printerr("ERROR from element %s: %s\n",
                    GST_OBJECT_NAME(msg->src), error->message);
@@ -157,10 +166,11 @@ int main(int argc, char *argv[])
                *decoder = NULL, *streammux = NULL, *sink = NULL, *pgie = NULL, *nvvidconv = NULL,
                *nvosd = NULL;
 
-    GstElement *transform = NULL;
     GstBus *bus = NULL;
     guint bus_watch_id;
     GstPad *osd_sink_pad = NULL;
+    gboolean yaml_config = FALSE;
+    NvDsGieType pgie_type = NVDS_GIE_PLUGIN_INFER;
 
     int current_device = -1;
     cudaGetDevice(&current_device);
@@ -170,12 +180,23 @@ int main(int argc, char *argv[])
     if (argc != 2)
     {
         g_printerr("Usage: %s <yml file>\n", argv[0]);
+        g_printerr("OR: %s <H264 filename>\n", argv[0]);
         return -1;
     }
 
     /* Standard GStreamer initialization */
     gst_init(&argc, &argv);
     loop = g_main_loop_new(NULL, FALSE);
+
+    /* Parse inference plugin type */
+    yaml_config = (g_str_has_suffix(argv[1], ".yml") ||
+                   g_str_has_suffix(argv[1], ".yaml"));
+
+    if (yaml_config)
+    {
+        RETURN_ON_PARSER_ERROR(nvds_parse_gie_type(&pgie_type, argv[1],
+                                                   "primary-gie"));
+    }
 
     /* Create gstreamer elements */
     /* Create Pipeline element that will form a connection of other elements */
@@ -200,9 +221,16 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* Use nvinfer to run inferencing on decoder's output,
+    /* Use nvinfer or nvinferserver to run inferencing on decoder's output,
      * behaviour of inferencing is set through config file */
-    pgie = gst_element_factory_make("nvinfer", "primary-nvinference-engine");
+    if (pgie_type == NVDS_GIE_PLUGIN_INFER_SERVER)
+    {
+        pgie = gst_element_factory_make("nvinferserver", "primary-nvinference-engine");
+    }
+    else
+    {
+        pgie = gst_element_factory_make("nvinfer", "primary-nvinference-engine");
+    }
 
     /* Use convertor to convert from NV12 to RGBA as required by nvosd */
     nvvidconv = gst_element_factory_make("nvvideoconvert", "nvvideo-converter");
@@ -213,9 +241,16 @@ int main(int argc, char *argv[])
     /* Finally render the osd output */
     if (prop.integrated)
     {
-        transform = gst_element_factory_make("nvegltransform", "nvegl-transform");
+        sink = gst_element_factory_make("nv3dsink", "nv3d-sink");
     }
-    sink = gst_element_factory_make("nveglglessink", "nvvideo-renderer");
+    else
+    {
+#ifdef __aarch64__
+        sink = gst_element_factory_make("nv3dsink", "nvvideo-renderer");
+#else
+        sink = gst_element_factory_make("nveglglessink", "nvvideo-renderer");
+#endif
+    }
 
     if (!source || !h264parser || !decoder || !pgie || !nvvidconv || !nvosd || !sink)
     {
@@ -223,28 +258,32 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (!transform && prop.integrated)
-    {
-        g_printerr("One tegra element could not be created. Exiting.\n");
-        return -1;
-    }
-
     /* we set the input filename to the source element */
     g_object_set(G_OBJECT(source), "location", argv[1], NULL);
 
-
-    if (g_str_has_suffix(argv[1], ".yml") || g_str_has_suffix(argv[1], ".yaml"))
+    if (g_str_has_suffix(argv[1], ".h264"))
     {
+        g_object_set(G_OBJECT(source), "location", argv[1], NULL);
 
-        nvds_parse_file_source(source, argv[1], "source");
-        nvds_parse_streammux(streammux, argv[1], "streammux");
+        g_object_set(G_OBJECT(streammux), "batch-size", 1, NULL);
 
+        g_object_set(G_OBJECT(streammux), "width", MUXER_OUTPUT_WIDTH, "height",
+                     MUXER_OUTPUT_HEIGHT,
+                     "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
 
-        nvds_parse_gie(pgie, argv[1], "primary-gie");
         /* Set all the necessary properties of the nvinfer element,
          * the necessary ones are : */
-        // g_object_set(G_OBJECT(pgie),
-        //              "config-file-path", "/media/cnhzcy14/work/project/sandbox/deepstream/deepstream-test1/config/dstest1_pgie_config.yml", NULL);
+        g_object_set(G_OBJECT(pgie),
+                     "config-file-path", "dstest1_pgie_config.txt", NULL);
+    }
+
+    if (yaml_config)
+    {
+        RETURN_ON_PARSER_ERROR(nvds_parse_file_source(source, argv[1], "source"));
+        RETURN_ON_PARSER_ERROR(nvds_parse_streammux(streammux, argv[1], "streammux"));
+
+        /* Set all the necessary properties of the inference element */
+        RETURN_ON_PARSER_ERROR(nvds_parse_gie(pgie, argv[1], "primary-gie"));
     }
 
     /* we add a message handler */
@@ -254,18 +293,10 @@ int main(int argc, char *argv[])
 
     /* Set up the pipeline */
     /* we add all elements into the pipeline */
-    if (prop.integrated)
-    {
-        gst_bin_add_many(GST_BIN(pipeline),
-                         source, h264parser, decoder, streammux, pgie,
-                         nvvidconv, nvosd, transform, sink, NULL);
-    }
-    else
-    {
-        gst_bin_add_many(GST_BIN(pipeline),
-                         source, h264parser, decoder, streammux, pgie,
-                         nvvidconv, nvosd, sink, NULL);
-    }
+    gst_bin_add_many(GST_BIN(pipeline),
+                     source, h264parser, decoder, streammux, pgie,
+                     nvvidconv, nvosd, sink, NULL);
+    g_print("Added elements to bin\n");
 
     GstPad *sinkpad, *srcpad;
     gchar pad_name_sink[16] = "sink_0";
@@ -296,7 +327,7 @@ int main(int argc, char *argv[])
 
     /* we link the elements together */
     /* file-source -> h264-parser -> nvh264-decoder ->
-     * nvinfer -> nvvidconv -> nvosd -> video-renderer */
+     * pgie -> nvvidconv -> nvosd -> video-renderer */
 
     if (!gst_element_link_many(source, h264parser, decoder, NULL))
     {
@@ -304,23 +335,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (prop.integrated)
+    if (!gst_element_link_many(streammux, pgie,
+                               nvvidconv, nvosd, sink, NULL))
     {
-        if (!gst_element_link_many(streammux, pgie,
-                                   nvvidconv, nvosd, transform, sink, NULL))
-        {
-            g_printerr("Elements could not be linked: 2. Exiting.\n");
-            return -1;
-        }
-    }
-    else
-    {
-        if (!gst_element_link_many(streammux, pgie,
-                                   nvvidconv, nvosd, sink, NULL))
-        {
-            g_printerr("Elements could not be linked: 2. Exiting.\n");
-            return -1;
-        }
+        g_printerr("Elements could not be linked: 2. Exiting.\n");
+        return -1;
     }
 
     /* Lets add probe to get informed of the meta data generated, we add probe to
