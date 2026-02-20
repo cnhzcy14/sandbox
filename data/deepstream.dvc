@@ -1,0 +1,6 @@
+outs:
+- md5: a9fa2f6a460c4c2f6f4341dd4b28345d.dir
+  size: 630841706
+  nfiles: 23
+  hash: md5
+  path: deepstream
