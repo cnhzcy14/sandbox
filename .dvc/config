@@ -1,0 +1,4 @@
+[core]
+    remote = data/deepstream
+['remote "data/deepstream"']
+    url = s3://deepstream
