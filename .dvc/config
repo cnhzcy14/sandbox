@@ -1,2 +1,6 @@
+[core]
+    remote = kitti
 ['remote "deepstream"']
     url = s3://deepstream
+['remote "kitti"']
+    url = s3://kitti

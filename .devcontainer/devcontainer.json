@@ -28,7 +28,9 @@
 				"rooveterinaryinc.roo-cline",
 				"github.copilot",
 				"yzhang.markdown-all-in-one",
-				"vivaxy.vscode-conventional-commits"
+				"vivaxy.vscode-conventional-commits",
+				"redhat.vscode-yaml",
+				"lakefs.lakefs-dvc"
 			]
 		}
 	}

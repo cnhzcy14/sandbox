@@ -1,0 +1,14 @@
+md5: a18de2267eb132e63a6550f9989c34b8
+frozen: true
+deps:
+- md5: a9554492b84af0a8b91188ac51b0df5f.dir
+  size: 24590660108
+  nfiles: 45997
+  hash: md5
+  path: s3://kitti/
+outs:
+- md5: 64d0d7e17d351c232ceff424e8dabf8d.dir
+  size: 8243722820
+  nfiles: 15526
+  hash: md5
+  path: kitti
