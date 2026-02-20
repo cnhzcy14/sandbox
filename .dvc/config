@@ -1,2 +1,2 @@
-['remote "data/deepstream"']
+['remote "deepstream"']
     url = s3://deepstream
